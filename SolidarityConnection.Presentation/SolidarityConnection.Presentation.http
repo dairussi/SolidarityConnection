@@ -1,0 +1,6 @@
+@SolidarityConnection.Presentation_HostAddress = http://localhost:5074
+
+GET {{SolidarityConnection.Presentation_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
