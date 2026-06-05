@@ -1,9 +1,11 @@
-namespace SolidarityConnection.Domain.Users.ValueObjects;
+namespace SolidarityConnection.Domain.User.ValueObjects;
 
 
 public record CpfValidator
 {
     public string Value { get; private set; }
+
+    private CpfValidator() { }
 
     private CpfValidator(string cpf)
     {

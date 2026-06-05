@@ -5,10 +5,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using SolidarityConnection.Application.Common.Interfaces;
-using SolidarityConnection.Application.Features.Auth.Commands.DonorRegistration;
-using SolidarityConnection.Application.Features.Auth.Commands.ManagerRegistration;
 using SolidarityConnection.Application.Features.Auth.Queries.Login;
+using SolidarityConnection.Application.Features.Users.Commands.AddUser;
+using SolidarityConnection.Infrastructure.Authentication;
 using SolidarityConnection.Infrastructure.Persistence;
+using SolidarityConnection.Infrastructure.Persistence.Interceptors;
 using SolidarityConnection.Infrastructure.Repositories;
 using SolidarityConnection.Infrastructure.Services;
 using System.Text;
@@ -21,20 +22,29 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         // Banco de dados
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("Default")));
+        //services.AddDbContext<AppDbContext>(options =>
+        //    options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+
+        services.AddDbContext<AppDbContext>((serviceProvider, options) =>
+        {
+            var userContext = serviceProvider.GetService<IUserContext>();
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            options.UseSqlServer(connectionString);
+            options.AddInterceptors(new AuditInterceptor(userContext));
+        }, ServiceLifetime.Scoped);
 
         // Repositórios
         services.AddScoped<IUserRepository, UserRepository>();
 
         // Serviços
+        services.AddHttpContextAccessor();
         services.AddScoped<ITokenService, JwtTokenService>();
+        services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
+        services.AddScoped<IUserContext, UserContext>();
 
         // Handlers — cada interface mapeada para sua implementação
         services.AddScoped<ILoginQueryHandler, LoginQueryHandler>();
-        services.AddScoped<IAddOrUpdateDonorCommandHandler, AddOrUpdateDonorCommandHandler>();
-        services.AddScoped<IManagerRegistrationCommandHandler, ManagerRegistrationCommandHandler>();
-
+        services.AddScoped<IAddOrUpdateUserCommandHandler, AddOrUpdateUserCommandHandler>();
         // JWT
         var key = Encoding.ASCII.GetBytes(configuration["Jwt:SecretKey"]!);
 

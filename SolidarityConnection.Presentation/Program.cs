@@ -1,11 +1,7 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SolidarityConnection.Infrastructure.DI;
 using SolidarityConnection.Infrastructure.Persistence;
 using SolidarityConnection.Infrastructure.Persistence.Seeds;
-using System.Text;
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();

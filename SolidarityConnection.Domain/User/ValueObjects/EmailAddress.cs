@@ -1,8 +1,11 @@
-namespace SolidarityConnection.Domain.Users.ValueObjects;
+namespace SolidarityConnection.Domain.User.ValueObjects;
 public record EmailAddress
 {
     public string Value { get; private set; }
-
+    public EmailAddress()
+    {
+        
+    }
     private EmailAddress(string email)
     {
         Value = email;

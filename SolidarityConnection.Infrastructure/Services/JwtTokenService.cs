@@ -26,7 +26,7 @@ public class JwtTokenService : ITokenService
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim(ClaimTypes.Role,           role)
+            new Claim(ClaimTypes.Role, role)
         };
 
         var descriptor = new SecurityTokenDescriptor

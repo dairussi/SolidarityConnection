@@ -1,11 +1,15 @@
-namespace SolidarityConnection.Domain.Users.ValueObjects;
+namespace SolidarityConnection.Domain.User.ValueObjects;
 public record FullName
 {
+    public FullName()
+    {
+        
+    }
     private FullName(string name)
     {
         Value = name;
     }
-    public string Value { get; set; } = default!;
+    public string Value { get; private set; } = default!;
     public static FullName Create(string rawInput)
     {
         if (string.IsNullOrEmpty(rawInput))

@@ -7,11 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
+    <ProjectReference Include="..\SolidarityConnection.Domain\SolidarityConnection.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SolidarityConnection.Domain\SolidarityConnection.Domain.csproj" />
+    <Folder Include="Features\Auth\" />
+    <Folder Include="Features\Users\Queries\" />
   </ItemGroup>
 
 </Project>

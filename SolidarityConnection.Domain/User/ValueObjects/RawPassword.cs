@@ -1,11 +1,15 @@
-namespace SolidarityConnection.Domain.Users.ValueObjects;
+namespace SolidarityConnection.Domain.User.ValueObjects;
 public record RawPassword
 {
+    public RawPassword()
+    {
+        
+    }
     private RawPassword(string password)
     {
         Value = password;
     }
-    public string Value { get; set; } = default!;
+    public string Value { get; private set; } = default!;
 
     public static RawPassword Create(string rawInput)
     {

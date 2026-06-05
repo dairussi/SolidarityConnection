@@ -1,9 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SolidarityConnection.Application.Features.Auth.Commands.DonorRegistration;
-using SolidarityConnection.Application.Features.Auth.Commands.DonorRegistration.Inputs;
-using SolidarityConnection.Application.Features.Auth.Commands.ManagerRegistration;
-using SolidarityConnection.Application.Features.Auth.Commands.ManagerRegistration.Inputs;
 using SolidarityConnection.Application.Features.Auth.Queries.Login;
 using SolidarityConnection.Application.Features.Auth.Queries.Login.Inputs;
 
@@ -14,8 +9,6 @@ namespace SolidarityConnection.Presentation.Controller
     public class AuthController : ControllerBase
     {
         private readonly ILoginQueryHandler _loginHandler;
-
-
 
         public AuthController(ILoginQueryHandler loginHandler)
         {

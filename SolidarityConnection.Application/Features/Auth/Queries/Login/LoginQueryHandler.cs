@@ -7,13 +7,16 @@ public class LoginQueryHandler : ILoginQueryHandler
 {
     private readonly IUserRepository _userRepository;
     private readonly ITokenService _tokenService;
+    private readonly IPasswordHasher _passwordHasher;
 
     public LoginQueryHandler(
         IUserRepository userRepository,
-        ITokenService tokenService)
+        ITokenService tokenService,
+        IPasswordHasher passwordHasher)
     {
         _userRepository = userRepository;
         _tokenService = tokenService;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<ResultData<LoginQueryOutput>> Handle(
@@ -25,16 +28,16 @@ public class LoginQueryHandler : ILoginQueryHandler
         if (user == null || !user.IsActive)
             return ResultData<LoginQueryOutput>.Error("Usuário ou senha inválidos.");
 
-        if (!BCrypt.Net.BCrypt.Verify(query.Password, user.PasswordHash))
+        if (!_passwordHasher.Verify(query.Password, user.PasswordHash))
             return ResultData<LoginQueryOutput>.Error("Usuário ou senha inválidos.");
 
-        var token = _tokenService.GenerateToken(user.Id, user.Role);
+        var token = _tokenService.GenerateToken(user.PublicId, user.Role.ToString());
 
         return ResultData<LoginQueryOutput>.Success(new LoginQueryOutput
         {
             Token = token,
             Name = user.Name,
-            Role = user.Role
+            Role = user.Role.ToString()
         });
     }
 }

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SolidarityConnection.Application.Common.Interfaces;
-using SolidarityConnection.Domain.Users.Models;
+using SolidarityConnection.Domain.User.Models;
 using SolidarityConnection.Infrastructure.Persistence;
 
 namespace SolidarityConnection.Infrastructure.Repositories;
@@ -13,11 +13,11 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
-    public async Task<Donor?> GetByEmailAsync(string email, CancellationToken cancellationToken)
+    public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
         => await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+        .FirstOrDefaultAsync(u => u.Email.Value == email, cancellationToken);
 
-    public async Task AddAsync(Donor user, CancellationToken cancellationToken)
+    public async Task AddAsync(User user, CancellationToken cancellationToken)
     {
         await _context.Users.AddAsync(user, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
@@ -25,5 +25,5 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken)
         => await _context.Users
-            .AnyAsync(u => u.Email == email, cancellationToken);
+        .AnyAsync(u => u.Email.Value == email, cancellationToken);
 }
