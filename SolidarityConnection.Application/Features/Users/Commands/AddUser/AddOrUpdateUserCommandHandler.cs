@@ -1,0 +1,53 @@
+using SolidarityConnection.Application.Common;
+using SolidarityConnection.Application.Common.Interfaces;
+using SolidarityConnection.Application.Features.Users.Mappers;
+using SolidarityConnection.Application.Features.Users.Outputs;
+using SolidarityConnection.Domain.User.Models;
+
+namespace SolidarityConnection.Application.Features.Users.Commands.AddUser;
+public class AddOrUpdateUserCommandHandler : IAddOrUpdateUserCommandHandler
+{
+    private readonly IUserRepository _userRepository;
+    private readonly ITokenService _tokenService;
+    private readonly IPasswordHasher _passwordHasher;
+
+    public AddOrUpdateUserCommandHandler(
+        IUserRepository userRepository,
+        ITokenService tokenService,
+        IPasswordHasher passwordHasher)
+    {
+        _userRepository = userRepository;
+        _tokenService = tokenService;
+        _passwordHasher = passwordHasher;
+    }
+
+    public async Task<ResultData<UserOutput>> Handle(
+        AddOrUpdateUserCommand command,
+        CancellationToken cancellationToken)
+    {
+        var isUpdate = command.PublicId.HasValue;
+
+        if (!isUpdate)
+        {
+            if (await _userRepository.EmailExistsAsync(command.Email.Value, cancellationToken))
+                return ResultData<UserOutput>.Error("E-mail já cadastrado.");
+        }
+
+        var passwordHash = _passwordHasher.Hash(command.Password.Value);
+
+        var user = User.Create(
+            command.Name.Value,
+            command.Email,
+            command.Cpf,
+            passwordHash,
+            command.Role);
+
+        await _userRepository.AddAsync(user, cancellationToken);
+
+        // if/else removido pois eram iguais
+        // lógica de update fica para implementar depois
+
+        var userOutput = user.ToOutput();
+        return ResultData<UserOutput>.Success(userOutput);
+    }
+}
