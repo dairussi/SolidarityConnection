@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using SolidarityConnection.Domain.Enums;
-using SolidarityConnection.Domain.Models;
+using SolidarityConnection.Domain.Common.Enums;
+using SolidarityConnection.Domain.Users.Models;
 
 
 namespace SolidarityConnection.Infrastructure.Persistence.Seeds;
@@ -16,7 +16,7 @@ public static class AdminUserSeed
 
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(configuration["AdminSeed:Password"]!);
 
-        var admin = User.Create(
+        var admin = Donor.Create(
             name: configuration["AdminSeed:Name"]!,
             email: email,
             cpf: string.Empty,

@@ -1,9 +1,11 @@
-namespace SolidarityConnection.Domain.Models;
-public class User
-{
-    private User() { }
+using SolidarityConnection.Domain.Common.Enums;
 
-    private User(string name, string email, string cpf, string passwordHash, string role)
+namespace SolidarityConnection.Domain.Users.Models;
+public class Donor
+{
+    private Donor() { }
+
+    private Donor(string name, string email, string cpf, string passwordHash, EUserRole role)
     {
         Id = Guid.NewGuid();
         Name = name;
@@ -18,12 +20,12 @@ public class User
     public string Email { get; private set; } = default!;
     public string Cpf { get; private set; } = default!;
     public string PasswordHash { get; private set; } = default!;
-    public string Role { get; private set; } = default!;
+    public EUserRole Role { get; private set; }
     public bool IsActive { get; private set; } = true;
 
-    public static User Create(string name, string email, string cpf, string passwordHash, string role)
+    public static Donor Create(string name, string email, string cpf, string passwordHash, EUserRole role)
     {
-        return new User(name, email, cpf, passwordHash, role);
+        return new Donor(name, email, cpf, passwordHash, role);
     }
 
     public void Deactivate()

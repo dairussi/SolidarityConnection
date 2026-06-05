@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using SolidarityConnection.Domain.Models;
+using SolidarityConnection.Domain.Users.Models;
 
 namespace SolidarityConnection.Infrastructure.Persistence
 {
@@ -7,11 +7,11 @@ namespace SolidarityConnection.Infrastructure.Persistence
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        public DbSet<User> Users => Set<User>();
+        public DbSet<Donor> Users => Set<Donor>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
-            builder.Entity<User>(entity =>
+            builder.Entity<Donor>(entity =>
             {
                 entity.HasKey(u => u.Id);
                 entity.HasIndex(u => u.Email).IsUnique();

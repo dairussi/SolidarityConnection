@@ -1,5 +1,5 @@
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +11,7 @@ using SolidarityConnection.Application.Features.Auth.Queries.Login;
 using SolidarityConnection.Infrastructure.Persistence;
 using SolidarityConnection.Infrastructure.Repositories;
 using SolidarityConnection.Infrastructure.Services;
+using System.Text;
 
 namespace SolidarityConnection.Infrastructure.DI;
 public static class DependencyInjection
@@ -31,7 +32,7 @@ public static class DependencyInjection
 
         // Handlers — cada interface mapeada para sua implementação
         services.AddScoped<ILoginQueryHandler, LoginQueryHandler>();
-        services.AddScoped<IDonorRegistrationCommandHandler, DonorRegistrationCommandHandler>();
+        services.AddScoped<IAddOrUpdateDonorCommandHandler, AddOrUpdateDonorCommandHandler>();
         services.AddScoped<IManagerRegistrationCommandHandler, ManagerRegistrationCommandHandler>();
 
         // JWT
@@ -52,9 +53,40 @@ public static class DependencyInjection
                 ValidateAudience = false,
                 ValidateLifetime = true
             };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnForbidden = async context =>
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+
+                    await context.Response.WriteAsJsonAsync(new
+                    {
+                        success = false,
+                        message = "Usuário não possui permissão para acessar este recurso."
+                    });
+                },
+
+                OnChallenge = async context =>
+                {
+                    context.HandleResponse();
+
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+
+                    await context.Response.WriteAsJsonAsync(new
+                    {
+                        success = false,
+                        message = "Usuário não autenticado."
+                    });
+                }
+            };
         });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy("OnlyManagers", policy =>
+                policy.RequireRole("GestorONG"));
+        });
 
         return services;
     }

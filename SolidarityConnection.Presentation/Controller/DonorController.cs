@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SolidarityConnection.Application.Features.Auth.Commands.DonorRegistration;
 using SolidarityConnection.Application.Features.Auth.Commands.DonorRegistration.Inputs;
@@ -9,19 +8,19 @@ namespace SolidarityConnection.Presentation.Controller;
 [Route("api/[controller]")]
 public class DonorController : ControllerBase
 {
-    private readonly IDonorRegistrationCommandHandler _donorRegistrationHandler;
+    private readonly IAddOrUpdateDonorCommandHandler _donorRegistrationHandler;
 
-    public DonorController(IDonorRegistrationCommandHandler registerDoadorHandler)
+    public DonorController(IAddOrUpdateDonorCommandHandler registerDoadorHandler)
     {
         _donorRegistrationHandler = registerDoadorHandler;
     }
 
     [HttpPost("Registration")]
-    public async Task<IActionResult> RegisterDoador(
-    [FromBody] DonorRegistrationInput input,
+    public async Task<IActionResult> Register(
+    [FromBody] AddOrUpdateDonorInput input,
     CancellationToken cancellationToken)
     {
-        var command = new DonorRegistrationCommand(input.Name, input.Email, input.Cpf, input.Password);
+        var command = input.MapToCommand();
         var result = await _donorRegistrationHandler.Handle(command, cancellationToken);
 
         if (!result.IsSuccess)
