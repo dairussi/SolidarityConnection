@@ -6,7 +6,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using SolidarityConnection.Application.Common.Interfaces;
 using SolidarityConnection.Application.Features.Auth.Queries.Login;
+using SolidarityConnection.Application.Features.Campaigns.Commands.CreateCampaign;
+using SolidarityConnection.Application.Features.Campaigns.Commands.DeleteCampaign;
+using SolidarityConnection.Application.Features.Campaigns.Commands.UpdateCampaignStatus;
+using SolidarityConnection.Application.Features.Campaigns.Queries.GetActiveCampaignsPaged;
+using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignById;
+using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaigns;
+using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignsPaged;
 using SolidarityConnection.Application.Features.Users.Commands.AddUser;
+using SolidarityConnection.Application.Features.Users.Queries.GetUsersPaged;
 using SolidarityConnection.Infrastructure.Authentication;
 using SolidarityConnection.Infrastructure.Persistence;
 using SolidarityConnection.Infrastructure.Persistence.Interceptors;
@@ -15,37 +23,41 @@ using SolidarityConnection.Infrastructure.Services;
 using System.Text;
 
 namespace SolidarityConnection.Infrastructure.DI;
+
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Banco de dados
-        //services.AddDbContext<AppDbContext>(options =>
-        //    options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
-
         services.AddDbContext<AppDbContext>((serviceProvider, options) =>
         {
             var userContext = serviceProvider.GetService<IUserContext>();
             var connectionString = configuration.GetConnectionString("DefaultConnection");
+
             options.UseSqlServer(connectionString);
             options.AddInterceptors(new AuditInterceptor(userContext));
         }, ServiceLifetime.Scoped);
 
-        // Repositórios
+        services.AddScoped<ICampaignRepository, CampaignRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
 
-        // Serviços
         services.AddHttpContextAccessor();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<IUserContext, UserContext>();
 
-        // Handlers — cada interface mapeada para sua implementação
         services.AddScoped<ILoginQueryHandler, LoginQueryHandler>();
         services.AddScoped<IAddOrUpdateUserCommandHandler, AddOrUpdateUserCommandHandler>();
-        // JWT
+        services.AddScoped<IGetUsersPagedQueryHandler, GetUsersPagedQueryHandler>();
+        services.AddScoped<ICreateCampaignCommandHandler, CreateCampaignCommandHandler>();
+        services.AddScoped<IDeleteCampaignCommandHandler, DeleteCampaignCommandHandler>();
+        services.AddScoped<IUpdateCampaignStatusCommandHandler, UpdateCampaignStatusCommandHandler>();
+        services.AddScoped<IGetCampaignByIdQueryHandler, GetCampaignByIdQueryHandler>();
+        services.AddScoped<IGetCampaignsQueryHandler, GetCampaignsQueryHandler>();
+        services.AddScoped<IGetCampaignsPagedQueryHandler, GetCampaignsPagedQueryHandler>();
+        services.AddScoped<IGetActiveCampaignsPagedQueryHandler, GetActiveCampaignsPagedQueryHandler>();
+
         var key = Encoding.ASCII.GetBytes(configuration["Jwt:SecretKey"]!);
 
         services.AddAuthentication(options =>
@@ -95,7 +107,7 @@ public static class DependencyInjection
         services.AddAuthorization(options =>
         {
             options.AddPolicy("OnlyManagers", policy =>
-                policy.RequireRole("GestorONG"));
+                policy.RequireRole("ONGManager"));
         });
 
         return services;

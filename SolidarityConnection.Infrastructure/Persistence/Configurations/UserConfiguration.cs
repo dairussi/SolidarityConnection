@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SolidarityConnection.Domain.User.Models;
 
@@ -9,6 +9,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     public void Configure(EntityTypeBuilder<User> entity)
     {
         entity.HasKey(u => u.Id);
+
+        entity.Property(u => u.PublicId)
+            .HasColumnType("uniqueidentifier")
+            .IsRequired();
+
+        entity.HasIndex(u => u.PublicId)
+            .IsUnique();
 
         entity.Property(u => u.Name)
             .HasMaxLength(150)

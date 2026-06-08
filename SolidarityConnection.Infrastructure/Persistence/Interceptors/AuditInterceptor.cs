@@ -4,13 +4,9 @@ using SolidarityConnection.Application.Common.Interfaces;
 using SolidarityConnection.Domain.Common.Models;
 
 namespace SolidarityConnection.Infrastructure.Persistence.Interceptors;
-public class AuditInterceptor : SaveChangesInterceptor
+public class AuditInterceptor(
+    IUserContext? userContext = null) : SaveChangesInterceptor
 {
-    private readonly IUserContext? _userContext;
-    public AuditInterceptor(IUserContext? userContext = null)
-    {
-        _userContext = userContext;
-    }
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
@@ -36,11 +32,11 @@ public class AuditInterceptor : SaveChangesInterceptor
 
         foreach (var entry in entries)
         {
-            if (_userContext != null)
+            if (userContext != null)
             {
                 try
                 {
-                    entry.Entity.CreatedBy = _userContext.GetCurrentUserId();
+                    entry.Entity.CreatedBy = userContext.GetCurrentUserId();
                 }
                 catch (UnauthorizedAccessException)
                 {
