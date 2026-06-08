@@ -15,5 +15,4 @@ public class UserContext(IHttpContextAccessor httpContextAccessor) : IUserContex
 
         return int.Parse(userIdClaim);
     }
-
 }

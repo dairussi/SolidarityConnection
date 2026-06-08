@@ -15,7 +15,7 @@ public sealed class DeleteCampaignCommandHandler(
 
         if (campaign is null)
         {
-            return ResultData<bool>.Error("Campaign not found.");
+            return ResultData<bool>.Error("Campanha não encontrada.");
         }
 
         await campaignRepository.DeleteAsync(campaign, cancellationToken);

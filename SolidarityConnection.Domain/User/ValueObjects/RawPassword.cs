@@ -3,12 +3,13 @@ public record RawPassword
 {
     public RawPassword()
     {
-        
     }
+
     private RawPassword(string password)
     {
         Value = password;
     }
+
     public string Value { get; private set; } = default!;
 
     public static RawPassword Create(string rawInput)
@@ -23,7 +24,7 @@ public record RawPassword
             throw new ArgumentException("A senha deve ter no mínimo 1 letra maiúscula.");
 
         if (!rawInput.Any(charItem => !char.IsLetterOrDigit(charItem)))
-            throw new ArgumentException("A senha deve ter no mínimo 1 caracter especial.");
+            throw new ArgumentException("A senha deve ter no mínimo 1 caractere especial.");
 
         return new RawPassword(rawInput);
     }

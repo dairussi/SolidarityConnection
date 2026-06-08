@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SolidarityConnection.Application.Common.Interfaces;
 using SolidarityConnection.Domain.User.Models;
 using SolidarityConnection.Infrastructure.Persistence;

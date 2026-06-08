@@ -32,9 +32,7 @@ public class AddOrUpdateUserCommandHandler(
 
         await userRepository.AddAsync(user, cancellationToken);
 
-        // if/else removido pois eram iguais
-        // lógica de update fica para implementar depois
-
+        // O bloco de update fica para implementar depois.
         var userOutput = user.ToOutput();
         return ResultData<UserOutput>.Success(userOutput);
     }

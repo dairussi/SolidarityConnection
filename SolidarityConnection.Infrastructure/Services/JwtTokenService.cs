@@ -12,7 +12,7 @@ public class JwtTokenService(
     public string GenerateToken(Guid userId, string role)
     {
         var secretKey = configuration["Jwt:SecretKey"]
-            ?? throw new InvalidOperationException("JWT key not configured in appsettings.json");
+            ?? throw new InvalidOperationException("A chave JWT não está configurada no appsettings.json.");
 
         var key = Encoding.ASCII.GetBytes(secretKey);
 

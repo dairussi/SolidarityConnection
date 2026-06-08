@@ -65,7 +65,7 @@ public class Campaign
     {
         if (Status == CampaignStatus.Closed)
         {
-            throw new CampaignDomainException("A closed campaign cannot be paused.");
+            throw new CampaignDomainException("Uma campanha encerrada não pode ser pausada.");
         }
 
         Status = CampaignStatus.Paused;
@@ -75,7 +75,7 @@ public class Campaign
     {
         if (amount <= 0)
         {
-            throw new CampaignDomainException("Donation amount must be greater than zero.");
+            throw new CampaignDomainException("O valor da doação deve ser maior que zero.");
         }
 
         AmountRaised += amount;
@@ -85,7 +85,7 @@ public class Campaign
     {
         if (string.IsNullOrWhiteSpace(title))
         {
-            throw new CampaignDomainException("Campaign title is required.");
+            throw new CampaignDomainException("O título da campanha é obrigatório.");
         }
     }
 
@@ -93,7 +93,7 @@ public class Campaign
     {
         if (string.IsNullOrWhiteSpace(description))
         {
-            throw new CampaignDomainException("Campaign description is required.");
+            throw new CampaignDomainException("A descrição da campanha é obrigatória.");
         }
     }
 
@@ -103,12 +103,12 @@ public class Campaign
 
         if (endDate.Date < utcToday)
         {
-            throw new CampaignDomainException("Campaign end date cannot be in the past.");
+            throw new CampaignDomainException("A data de término da campanha não pode estar no passado.");
         }
 
         if (endDate <= startDate)
         {
-            throw new CampaignDomainException("Campaign end date must be greater than the start date.");
+            throw new CampaignDomainException("A data de término da campanha deve ser maior que a data de início.");
         }
     }
 
@@ -116,7 +116,7 @@ public class Campaign
     {
         if (targetAmount <= 0)
         {
-            throw new CampaignDomainException("Campaign target amount must be greater than zero.");
+            throw new CampaignDomainException("A meta de arrecadação da campanha deve ser maior que zero.");
         }
     }
 
@@ -124,7 +124,7 @@ public class Campaign
     {
         if (managerId <= 0)
         {
-            throw new CampaignDomainException("Campaign manager id is required.");
+            throw new CampaignDomainException("O identificador do gestor da campanha é obrigatório.");
         }
     }
 }

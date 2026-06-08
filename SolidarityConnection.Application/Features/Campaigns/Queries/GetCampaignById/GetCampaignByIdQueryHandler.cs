@@ -17,7 +17,7 @@ public sealed class GetCampaignByIdQueryHandler(
 
         if (campaign is null)
         {
-            return ResultData<CampaignOutput>.Error("Campaign not found.");
+            return ResultData<CampaignOutput>.Error("Campanha não encontrada.");
         }
 
         return ResultData<CampaignOutput>.Success(campaign.ToOutput());

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SolidarityConnection.Domain.Campaign.Models;
 using SolidarityConnection.Domain.User.Models;
 

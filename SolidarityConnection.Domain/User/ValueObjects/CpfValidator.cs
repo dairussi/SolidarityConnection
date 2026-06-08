@@ -1,11 +1,12 @@
 namespace SolidarityConnection.Domain.User.ValueObjects;
 
-
 public record CpfValidator
 {
     public string Value { get; private set; }
 
-    private CpfValidator() { }
+    private CpfValidator()
+    {
+    }
 
     private CpfValidator(string cpf)
     {
@@ -58,4 +59,3 @@ public record CpfValidator
 
     public override string ToString() => Value;
 }
-

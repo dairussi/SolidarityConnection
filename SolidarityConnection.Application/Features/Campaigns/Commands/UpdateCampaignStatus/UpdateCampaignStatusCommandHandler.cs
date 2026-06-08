@@ -18,7 +18,7 @@ public sealed class UpdateCampaignStatusCommandHandler(
 
         if (campaign is null)
         {
-            return ResultData<CampaignOutput>.Error("Campaign not found.");
+            return ResultData<CampaignOutput>.Error("Campanha não encontrada.");
         }
 
         switch (command.Status)
@@ -32,7 +32,7 @@ public sealed class UpdateCampaignStatusCommandHandler(
                 break;
 
             default:
-                return ResultData<CampaignOutput>.Error("Campaign status update only supports Paused or Closed.");
+                return ResultData<CampaignOutput>.Error("A atualização de status da campanha aceita apenas Pausada ou Encerrada.");
         }
 
         await campaignRepository.UpdateAsync(campaign, cancellationToken);
