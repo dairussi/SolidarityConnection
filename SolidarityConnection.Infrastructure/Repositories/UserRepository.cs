@@ -38,4 +38,9 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
         return (items, totalCount);
     }
+
+    public async Task<User> GetByIdAsync(int id, CancellationToken cancellationToken)
+        => await context.Users
+        .FirstOrDefaultAsync(u => u.PublicId == id, cancellationToken)
+        ?? throw new KeyNotFoundException("Usuário não encontrado.");
 }

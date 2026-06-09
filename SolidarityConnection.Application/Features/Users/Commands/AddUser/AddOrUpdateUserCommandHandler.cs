@@ -14,25 +14,46 @@ public class AddOrUpdateUserCommandHandler(
         CancellationToken cancellationToken)
     {
         var isUpdate = command.PublicId.HasValue;
+        var passwordHash = passwordHasher.Hash(command.Password.Value);
+
+        User user;
 
         if (!isUpdate)
         {
             if (await userRepository.EmailExistsAsync(command.Email.Value, cancellationToken))
+            {
                 return ResultData<UserOutput>.Error("E-mail já cadastrado.");
+            }
+            else
+            {
+
+                 user = User.Create(
+                    command.Name.Value,
+                    command.Email,
+                    command.Cpf,
+                    passwordHash,
+                    command.Role);
+
+                await userRepository.AddAsync(user, cancellationToken);
+            }
+
+        }
+        else
+        {
+            user = await userRepository.GetByIdAsync(command.PublicId.Value, cancellationToken);
+
+            user.UpdateDetails(
+                command.Name.Value,
+                command.Email,
+                command.Cpf,
+                passwordHash,
+                command.Role);
+
+            await userRepository.UpdateAsync(user, cancellationToken);
+
         }
 
-        var passwordHash = passwordHasher.Hash(command.Password.Value);
-
-        var user = User.Create(
-            command.Name.Value,
-            command.Email,
-            command.Cpf,
-            passwordHash,
-            command.Role);
-
-        await userRepository.AddAsync(user, cancellationToken);
-
-        // O bloco de update fica para implementar depois.
+        
         var userOutput = user.ToOutput();
         return ResultData<UserOutput>.Success(userOutput);
     }
