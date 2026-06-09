@@ -53,7 +53,7 @@ public sealed class CampaignConfiguration : IEntityTypeConfiguration<Campaign>
             .IsRequired();
 
         entity.Property(campaign => campaign.ManagerId)
-            .HasColumnType("uniqueidentifier")
+            .HasColumnType("int")
             .IsRequired();
 
         entity.HasIndex(campaign => campaign.ManagerId);
@@ -62,7 +62,6 @@ public sealed class CampaignConfiguration : IEntityTypeConfiguration<Campaign>
         entity.HasOne<User>()
             .WithMany()
             .HasForeignKey(campaign => campaign.ManagerId)
-            .HasPrincipalKey(user => user.PublicId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

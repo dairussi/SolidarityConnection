@@ -9,7 +9,7 @@ namespace SolidarityConnection.Infrastructure.Services;
 public class JwtTokenService(
     IConfiguration configuration) : ITokenService
 {
-    public string GenerateToken(Guid userId, string role)
+    public string GenerateToken(int userId, string role)
     {
         var secretKey = configuration["Jwt:SecretKey"]
             ?? throw new InvalidOperationException("A chave JWT não está configurada no appsettings.json.");

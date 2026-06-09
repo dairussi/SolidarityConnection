@@ -20,7 +20,7 @@ public class LoginQueryHandler(
         if (!passwordHasher.Verify(query.Password, user.PasswordHash))
             return ResultData<LoginQueryOutput>.Error("Usuário ou senha inválidos.");
 
-        var token = tokenService.GenerateToken(user.PublicId, user.Role.ToString());
+        var token = tokenService.GenerateToken(user.Id, user.Role.ToString());
 
         return ResultData<LoginQueryOutput>.Success(new LoginQueryOutput
         {
