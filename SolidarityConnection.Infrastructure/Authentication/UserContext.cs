@@ -3,18 +3,11 @@ using SolidarityConnection.Application.Common.Interfaces;
 using System.Security.Claims;
 
 namespace SolidarityConnection.Infrastructure.Authentication;
-public class UserContext : IUserContext
+public class UserContext(IHttpContextAccessor httpContextAccessor) : IUserContext
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-
-    public UserContext(IHttpContextAccessor httpContextAccessor)
-    {
-        _httpContextAccessor = httpContextAccessor;
-    }
-
     public int GetCurrentUserId()
     {
-        var userIdClaim = _httpContextAccessor.HttpContext?.User
+        var userIdClaim = httpContextAccessor.HttpContext?.User
           .FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrEmpty(userIdClaim))
@@ -22,5 +15,4 @@ public class UserContext : IUserContext
 
         return int.Parse(userIdClaim);
     }
-
 }

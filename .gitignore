@@ -1,7 +1,7 @@
 ############################
-# Build / Compila��o
+# Build / Compilação
 ############################
-# Ignora bin�rios e artefatos de compila��o em qualquer pasta
+# Ignora binários e artefatos de compilação em qualquer pasta
 **/bin/
 **/obj/
 **/out/
@@ -20,7 +20,7 @@
 *.code-workspace
 
 ############################
-# Usu�rio / Ambiente local
+# Usuário / Ambiente local
 ############################
 *.user
 *.suo
@@ -38,7 +38,7 @@ packages/
 *.nuget.targets
 
 ############################
-# Build outputs / Binaries
+# Saídas de compilação / Binários
 ############################
 *.dll
 *.exe
@@ -65,7 +65,7 @@ Desktop.ini
 ############################
 # Outros opcionais
 ############################
-# Arquivos tempor�rios
+# Arquivos temporários
 *.tmp
 *.temp
 
@@ -81,9 +81,9 @@ Desktop.ini
 .env
 
 ############################
-# k8s Secrets
+# Segredos do k8s
 ############################
-# Ignorar secrets reais (manter secret.template.yaml versionado)
+# Ignorar segredos reais (manter secret.template.yaml versionado)
 **/secret.yaml
 k8s/secret.yaml
 k8s/*-secret.yaml

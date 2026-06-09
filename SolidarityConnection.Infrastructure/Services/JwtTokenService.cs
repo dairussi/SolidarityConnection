@@ -5,21 +5,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using SolidarityConnection.Application.Common.Interfaces;
 
-
 namespace SolidarityConnection.Infrastructure.Services;
-public class JwtTokenService : ITokenService
+public class JwtTokenService(
+    IConfiguration configuration) : ITokenService
 {
-    private readonly IConfiguration _configuration;
-
-    public JwtTokenService(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
-
     public string GenerateToken(Guid userId, string role)
     {
-        var secretKey = _configuration["Jwt:SecretKey"]
-                ?? throw new InvalidOperationException("Chave JWT não configurada no appsettings.json");
+        var secretKey = configuration["Jwt:SecretKey"]
+            ?? throw new InvalidOperationException("A chave JWT não está configurada no appsettings.json.");
 
         var key = Encoding.ASCII.GetBytes(secretKey);
 

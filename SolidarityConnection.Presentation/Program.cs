@@ -11,11 +11,11 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "SolidarityConnection API",
+        Title = "API da SolidarityConnection",
         Version = "v1"
     });
 
-    // JWT Authentication
+    // Autenticação JWT
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",

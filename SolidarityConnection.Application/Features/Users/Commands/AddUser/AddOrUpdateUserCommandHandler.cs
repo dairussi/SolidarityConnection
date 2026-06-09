@@ -5,22 +5,10 @@ using SolidarityConnection.Application.Features.Users.Outputs;
 using SolidarityConnection.Domain.User.Models;
 
 namespace SolidarityConnection.Application.Features.Users.Commands.AddUser;
-public class AddOrUpdateUserCommandHandler : IAddOrUpdateUserCommandHandler
-{
-    private readonly IUserRepository _userRepository;
-    private readonly ITokenService _tokenService;
-    private readonly IPasswordHasher _passwordHasher;
-
-    public AddOrUpdateUserCommandHandler(
+public class AddOrUpdateUserCommandHandler(
         IUserRepository userRepository,
-        ITokenService tokenService,
-        IPasswordHasher passwordHasher)
-    {
-        _userRepository = userRepository;
-        _tokenService = tokenService;
-        _passwordHasher = passwordHasher;
-    }
-
+        IPasswordHasher passwordHasher) : IAddOrUpdateUserCommandHandler
+{
     public async Task<ResultData<UserOutput>> Handle(
         AddOrUpdateUserCommand command,
         CancellationToken cancellationToken)
@@ -29,11 +17,11 @@ public class AddOrUpdateUserCommandHandler : IAddOrUpdateUserCommandHandler
 
         if (!isUpdate)
         {
-            if (await _userRepository.EmailExistsAsync(command.Email.Value, cancellationToken))
+            if (await userRepository.EmailExistsAsync(command.Email.Value, cancellationToken))
                 return ResultData<UserOutput>.Error("E-mail já cadastrado.");
         }
 
-        var passwordHash = _passwordHasher.Hash(command.Password.Value);
+        var passwordHash = passwordHasher.Hash(command.Password.Value);
 
         var user = User.Create(
             command.Name.Value,
@@ -42,11 +30,9 @@ public class AddOrUpdateUserCommandHandler : IAddOrUpdateUserCommandHandler
             passwordHash,
             command.Role);
 
-        await _userRepository.AddAsync(user, cancellationToken);
+        await userRepository.AddAsync(user, cancellationToken);
 
-        // if/else removido pois eram iguais
-        // lógica de update fica para implementar depois
-
+        // O bloco de update fica para implementar depois.
         var userOutput = user.ToOutput();
         return ResultData<UserOutput>.Success(userOutput);
     }

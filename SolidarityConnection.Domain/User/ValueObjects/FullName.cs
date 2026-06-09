@@ -3,12 +3,13 @@ public record FullName
 {
     public FullName()
     {
-        
     }
+
     private FullName(string name)
     {
         Value = name;
     }
+
     public string Value { get; private set; } = default!;
     public static FullName Create(string rawInput)
     {
@@ -23,6 +24,4 @@ public record FullName
 
         return new FullName(rawInput);
     }
-
 }
-

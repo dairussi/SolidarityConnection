@@ -1,12 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using SolidarityConnection.Domain.Campaign.Models;
 using SolidarityConnection.Domain.User.Models;
 
 namespace SolidarityConnection.Infrastructure.Persistence
 {
-    public class AppDbContext : DbContext
+    public class AppDbContext(
+        DbContextOptions<AppDbContext> options) : DbContext(options)
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
+        public DbSet<Campaign> Campaigns => Set<Campaign>();
         public DbSet<User> Users => Set<User>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
