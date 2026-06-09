@@ -10,51 +10,41 @@ public class AddOrUpdateUserCommandHandler(
         IPasswordHasher passwordHasher) : IAddOrUpdateUserCommandHandler
 {
     public async Task<ResultData<UserOutput>> Handle(
-        AddOrUpdateUserCommand command,
-        CancellationToken cancellationToken)
+    AddOrUpdateUserCommand command,
+    CancellationToken cancellationToken)
     {
-        var isUpdate = command.PublicId.HasValue;
-        var passwordHash = passwordHasher.Hash(command.Password.Value);
-
         User user;
 
-        if (!isUpdate)
+        if (!command.PublicId.HasValue)
         {
             if (await userRepository.EmailExistsAsync(command.Email.Value, cancellationToken))
-            {
                 return ResultData<UserOutput>.Error("E-mail já cadastrado.");
-            }
-            else
-            {
 
-                 user = User.Create(
-                    command.Name.Value,
-                    command.Email,
-                    command.Cpf,
-                    passwordHash,
-                    command.Role);
+            if (await userRepository.CpfExistsAsync(command.Cpf.Value, cancellationToken))
+                return ResultData<UserOutput>.Error("CPF já cadastrado.");
 
-                await userRepository.AddAsync(user, cancellationToken);
-            }
+            var passwordHash = passwordHasher.Hash(command.Password.Value);
 
+            user = User.Create(command.Name.Value, command.Email, command.Cpf, passwordHash, command.Role);
+            await userRepository.AddAsync(user, cancellationToken);
         }
         else
         {
+            if (await userRepository.EmailExistsAsync(command.Email.Value, cancellationToken, command.PublicId))
+                return ResultData<UserOutput>.Error("E-mail já cadastrado por outro usuário.");
+
+            if (await userRepository.CpfExistsAsync(command.Cpf.Value, cancellationToken, command.PublicId))
+                return ResultData<UserOutput>.Error("CPF já cadastrado por outro usuário.");
+
             user = await userRepository.GetByIdAsync(command.PublicId.Value, cancellationToken);
 
-            user.UpdateDetails(
-                command.Name.Value,
-                command.Email,
-                command.Cpf,
-                passwordHash,
-                command.Role);
+            if (user is null)
+                return ResultData<UserOutput>.Error("Usuário não encontrado.");
 
+            user.UpdateDetails(command.Name.Value, command.Email, command.Cpf, command.Role);
             await userRepository.UpdateAsync(user, cancellationToken);
-
         }
 
-        
-        var userOutput = user.ToOutput();
-        return ResultData<UserOutput>.Success(userOutput);
+        return ResultData<UserOutput>.Success(user.ToOutput());
     }
 }
