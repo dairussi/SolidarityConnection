@@ -13,9 +13,11 @@ using SolidarityConnection.Application.Features.Campaigns.Queries.GetActiveCampa
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignById;
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaigns;
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignsPaged;
+using SolidarityConnection.Application.Features.Donations.Commands.CreateDonation;
 using SolidarityConnection.Application.Features.Users.Commands.AddUser;
 using SolidarityConnection.Application.Features.Users.Queries.GetUsersPaged;
 using SolidarityConnection.Infrastructure.Authentication;
+using SolidarityConnection.Infrastructure.Messaging;
 using SolidarityConnection.Infrastructure.Persistence;
 using SolidarityConnection.Infrastructure.Persistence.Interceptors;
 using SolidarityConnection.Infrastructure.Repositories;
@@ -57,6 +59,8 @@ public static class DependencyInjection
         services.AddScoped<IGetCampaignsQueryHandler, GetCampaignsQueryHandler>();
         services.AddScoped<IGetCampaignsPagedQueryHandler, GetCampaignsPagedQueryHandler>();
         services.AddScoped<IGetActiveCampaignsPagedQueryHandler, GetActiveCampaignsPagedQueryHandler>();
+        services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
+        services.AddScoped<ICreateDonationCommandHandler, CreateDonationCommandHandler>();
 
         var key = Encoding.ASCII.GetBytes(configuration["Jwt:SecretKey"]!);
 

@@ -16,11 +16,6 @@ public class UserRepository(AppDbContext context) : IUserRepository
         await context.Users.AddAsync(user, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
     }
-
-    public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken)
-        => await context.Users
-        .AnyAsync(u => u.Email.Value == email, cancellationToken);
-
     public async Task<(IReadOnlyList<User> Items, int TotalCount)> GetPagedAsync(
         int page,
         int pageSize,
@@ -38,4 +33,23 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
         return (items, totalCount);
     }
+
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+        => await context.Users
+        .FirstAsync(u => u.PublicId == id, cancellationToken);
+
+    public async Task UpdateAsync(User user, CancellationToken cancellationToken)
+    {
+        context.Users.Update(user);
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken, Guid? excludeId = null)
+        => await context.Users
+            .AnyAsync(u => u.Email.Value == email && (excludeId == null || u.PublicId != excludeId), cancellationToken);
+
+    public async Task<bool> CpfExistsAsync(string cpf, CancellationToken cancellationToken, Guid? excludeId = null)
+        => await context.Users
+            .AnyAsync(u => u.Cpf.Value == cpf && (excludeId == null || u.PublicId != excludeId), cancellationToken);
+
 }

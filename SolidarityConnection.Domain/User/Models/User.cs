@@ -30,12 +30,11 @@ public class User : BaseModel
         return new User(name, email, cpf, passwordHash, role);
     }
 
-    public void UpdateDetails(string name, EmailAddress email, CpfValidator cpf, string passwordHash, EUserRole role)
+    public void UpdateDetails(string name, EmailAddress email, CpfValidator cpf, EUserRole role)
     {
         Name = name;
         Email = email;
         Cpf = cpf;
-        PasswordHash = passwordHash;
         Role = role;
     }
 
