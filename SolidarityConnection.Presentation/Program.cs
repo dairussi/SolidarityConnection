@@ -1,6 +1,8 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using SolidarityConnection.Infrastructure.DI;
 using SolidarityConnection.Infrastructure.Persistence;
+using SolidarityConnection.Infrastructure.Persistence.Bootstrap;
 using SolidarityConnection.Infrastructure.Persistence.Seeds;
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +60,7 @@ using (var scope = app.Services.CreateScope())
     var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 
     await context.Database.EnsureCreatedAsync();
+    await DonationSchemaBootstrapper.EnsureDonationsTableAsync(context);
     await AdminUserSeed.SeedAsync(context, configuration);
 }
 

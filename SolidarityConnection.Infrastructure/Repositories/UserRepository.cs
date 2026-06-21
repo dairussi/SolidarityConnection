@@ -36,7 +36,7 @@ public class UserRepository(AppDbContext context) : IUserRepository
 
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         => await context.Users
-        .FirstAsync(u => u.PublicId == id, cancellationToken);
+            .FirstOrDefaultAsync(u => u.PublicId == id, cancellationToken);
 
     public async Task UpdateAsync(User user, CancellationToken cancellationToken)
     {

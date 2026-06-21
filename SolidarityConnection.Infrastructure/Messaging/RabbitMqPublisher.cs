@@ -1,9 +1,9 @@
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using SolidarityConnection.Application.Common.Interfaces;
+using SolidarityConnection.Infrastructure.Options;
 using System.Text;
 using System.Text.Json;
-
 
 namespace SolidarityConnection.Infrastructure.Messaging;
 public sealed class RabbitMqPublisher : IMessagePublisher, IDisposable
@@ -11,14 +11,16 @@ public sealed class RabbitMqPublisher : IMessagePublisher, IDisposable
     private readonly IConnection _connection;
     private readonly IModel _channel;
 
-    public RabbitMqPublisher(IConfiguration configuration)
+    public RabbitMqPublisher(IOptions<RabbitMqOptions> rabbitMqOptions)
     {
+        var options = rabbitMqOptions.Value;
+
         var factory = new ConnectionFactory
         {
-            HostName = configuration["RabbitMQ:Host"] ?? "localhost",
-            Port = int.Parse(configuration["RabbitMQ:Port"] ?? "5672"),
-            UserName = configuration["RabbitMQ:Username"] ?? "guest",
-            Password = configuration["RabbitMQ:Password"] ?? "guest"
+            HostName = options.Host,
+            Port = options.Port,
+            UserName = options.Username,
+            Password = options.Password
         };
 
         _connection = factory.CreateConnection();
@@ -41,7 +43,7 @@ public sealed class RabbitMqPublisher : IMessagePublisher, IDisposable
         var body = Encoding.UTF8.GetBytes(json);
 
         var props = _channel.CreateBasicProperties();
-        props.Persistent = true; 
+        props.Persistent = true;
 
         _channel.BasicPublish(
             exchange: string.Empty,
