@@ -15,9 +15,14 @@ using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaigns;
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignsPaged;
 using SolidarityConnection.Application.Features.Donations.Commands.CreateDonation;
 using SolidarityConnection.Application.Features.Users.Commands.AddUser;
+using SolidarityConnection.Application.Features.Users.Commands.ToggleUserRole;
+using SolidarityConnection.Application.Features.Users.Queries.GetUserById;
 using SolidarityConnection.Application.Features.Users.Queries.GetUsersPaged;
+using SolidarityConnection.Infrastructure.Adapters.Events.Consumers;
 using SolidarityConnection.Infrastructure.Authentication;
+using SolidarityConnection.Infrastructure.HostedServices;
 using SolidarityConnection.Infrastructure.Messaging;
+using SolidarityConnection.Infrastructure.Options;
 using SolidarityConnection.Infrastructure.Persistence;
 using SolidarityConnection.Infrastructure.Persistence.Interceptors;
 using SolidarityConnection.Infrastructure.Repositories;
@@ -41,7 +46,10 @@ public static class DependencyInjection
             options.AddInterceptors(new AuditInterceptor(userContext));
         }, ServiceLifetime.Scoped);
 
+        services.Configure<RabbitMqOptions>(configuration.GetSection("RabbitMQ"));
+
         services.AddScoped<ICampaignRepository, CampaignRepository>();
+        services.AddScoped<IDonationRepository, DonationRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
 
         services.AddHttpContextAccessor();
@@ -51,6 +59,8 @@ public static class DependencyInjection
 
         services.AddScoped<ILoginQueryHandler, LoginQueryHandler>();
         services.AddScoped<IAddOrUpdateUserCommandHandler, AddOrUpdateUserCommandHandler>();
+        services.AddScoped<IToggleUserRoleCommandHandler, ToggleUserRoleCommandHandler>();
+        services.AddScoped<IGetUserByIdQueryHandler, GetUserByIdQueryHandler>();
         services.AddScoped<IGetUsersPagedQueryHandler, GetUsersPagedQueryHandler>();
         services.AddScoped<ICreateCampaignCommandHandler, CreateCampaignCommandHandler>();
         services.AddScoped<IDeleteCampaignCommandHandler, DeleteCampaignCommandHandler>();
@@ -59,8 +69,10 @@ public static class DependencyInjection
         services.AddScoped<IGetCampaignsQueryHandler, GetCampaignsQueryHandler>();
         services.AddScoped<IGetCampaignsPagedQueryHandler, GetCampaignsPagedQueryHandler>();
         services.AddScoped<IGetActiveCampaignsPagedQueryHandler, GetActiveCampaignsPagedQueryHandler>();
-        services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
         services.AddScoped<ICreateDonationCommandHandler, CreateDonationCommandHandler>();
+        services.AddScoped<DonationProcessedConsumer>();
+        services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
+        services.AddHostedService<RabbitMqDonationProcessedConsumerHostedService>();
 
         var key = Encoding.ASCII.GetBytes(configuration["Jwt:SecretKey"]!);
 

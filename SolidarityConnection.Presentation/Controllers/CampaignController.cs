@@ -82,7 +82,7 @@ public class CampaignController(
         return Ok(result.Data);
     }
 
-    [Authorize]
+    [Authorize(Roles = nameof(EUserRole.GestorONG))]
     [HttpPatch("{id:guid}/status")]
     public async Task<IActionResult> UpdateStatus(
         Guid id,
@@ -98,7 +98,7 @@ public class CampaignController(
         return Ok(result.Data);
     }
 
-    [Authorize]
+    [Authorize(Roles = nameof(EUserRole.GestorONG))]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {

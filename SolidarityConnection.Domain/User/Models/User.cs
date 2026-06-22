@@ -30,12 +30,11 @@ public class User : BaseModel
         return new User(name, email, cpf, passwordHash, role);
     }
 
-    public void UpdateDetails(string name, EmailAddress email, CpfValidator cpf, EUserRole role)
+    public void UpdateDetails(string name, EmailAddress email, CpfValidator cpf)
     {
         Name = name;
         Email = email;
         Cpf = cpf;
-        Role = role;
     }
 
     public void UpdatePassword(string password)
@@ -46,5 +45,12 @@ public class User : BaseModel
     public void Deactivate()
     {
         IsActive = false;
+    }
+
+    public void ToggleRole()
+    {
+        Role = Role == EUserRole.Doador
+            ? EUserRole.GestorONG
+            : EUserRole.Doador;
     }
 }

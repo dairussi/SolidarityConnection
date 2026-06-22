@@ -12,7 +12,7 @@ public class DonationController(
     ICreateDonationCommandHandler createDonationCommandHandler,
     IUserContext userContext) : ControllerBase
 {
-    [Authorize(Roles = nameof(EUserRole.Doador))]
+    [Authorize]
     [HttpPost]
     public async Task<IActionResult> Create(
         [FromBody] CreateDonationInput input,

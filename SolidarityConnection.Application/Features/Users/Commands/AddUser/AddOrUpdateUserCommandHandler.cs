@@ -2,6 +2,7 @@ using SolidarityConnection.Application.Common;
 using SolidarityConnection.Application.Common.Interfaces;
 using SolidarityConnection.Application.Features.Users.Mappers;
 using SolidarityConnection.Application.Features.Users.Outputs;
+using SolidarityConnection.Domain.Common.Enums;
 using SolidarityConnection.Domain.User.Models;
 
 namespace SolidarityConnection.Application.Features.Users.Commands.AddUser;
@@ -25,7 +26,7 @@ public class AddOrUpdateUserCommandHandler(
 
             var passwordHash = passwordHasher.Hash(command.Password.Value);
 
-            user = User.Create(command.Name.Value, command.Email, command.Cpf, passwordHash, command.Role);
+            user = User.Create(command.Name.Value, command.Email, command.Cpf, passwordHash, EUserRole.Doador);
             await userRepository.AddAsync(user, cancellationToken);
         }
         else
@@ -36,12 +37,13 @@ public class AddOrUpdateUserCommandHandler(
             if (await userRepository.CpfExistsAsync(command.Cpf.Value, cancellationToken, command.PublicId))
                 return ResultData<UserOutput>.Error("CPF já cadastrado por outro usuário.");
 
-            user = await userRepository.GetByIdAsync(command.PublicId.Value, cancellationToken);
+            var existingUser = await userRepository.GetByIdAsync(command.PublicId.Value, cancellationToken);
 
-            if (user is null)
+            if (existingUser is null)
                 return ResultData<UserOutput>.Error("Usuário não encontrado.");
 
-            user.UpdateDetails(command.Name.Value, command.Email, command.Cpf, command.Role);
+            user = existingUser;
+            user.UpdateDetails(command.Name.Value, command.Email, command.Cpf);
             await userRepository.UpdateAsync(user, cancellationToken);
         }
 

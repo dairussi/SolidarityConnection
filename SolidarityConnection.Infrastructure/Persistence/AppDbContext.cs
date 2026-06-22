@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SolidarityConnection.Domain.Campaign.Models;
+using SolidarityConnection.Domain.Donation.Models;
 using SolidarityConnection.Domain.User.Models;
 
 namespace SolidarityConnection.Infrastructure.Persistence
@@ -8,6 +9,7 @@ namespace SolidarityConnection.Infrastructure.Persistence
         DbContextOptions<AppDbContext> options) : DbContext(options)
     {
         public DbSet<Campaign> Campaigns => Set<Campaign>();
+        public DbSet<Donation> Donations => Set<Donation>();
         public DbSet<User> Users => Set<User>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
