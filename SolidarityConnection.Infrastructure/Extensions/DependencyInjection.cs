@@ -126,6 +126,16 @@ public static class DependencyInjection
                 policy.RequireRole("ONGManager"));
         });
 
+        services.AddHealthChecks()
+            .AddSqlServer(
+                connectionString: configuration.GetConnectionString("DefaultConnection")!,
+                name: "sqlserver",
+                tags: new[] { "db", "sql" })
+            .AddRabbitMQ(
+                rabbitConnectionString: $"amqp://{configuration["RabbitMQ:Username"]}:{configuration["RabbitMQ:Password"]}@{configuration["RabbitMQ:Host"]}:{configuration["RabbitMQ:Port"]}/",
+                name: "rabbitmq",
+                tags: new[] { "messaging" });
+
         return services;
     }
 }
