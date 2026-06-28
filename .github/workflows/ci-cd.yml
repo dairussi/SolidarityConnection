@@ -1,0 +1,294 @@
+name: CI/CD - SolidarityConnection to EKS
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: CHANGE_ME_EKS_CLUSTER_NAME
+  NAMESPACE: solidarity-connection-namespace
+  # Define a tag de versão uma vez aqui.
+  # github.sha é o hash do commit (ex: a3f8c12b).
+  # Usamos os primeiros 7 caracteres para ficar legível.
+  IMAGE_TAG: ${{ github.sha }}
+
+# ────────────────────────────────────────────────────────────────
+# O pipeline é dividido em 3 JOBS que rodam em sequência.
+# Se um job falha, os seguintes não executam (proteção automática).
+# ────────────────────────────────────────────────────────────────
+jobs:
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 1 — BUILD & TEST
+  # Compila o código .NET e roda os testes unitários.
+  # Se os testes falharem, nenhuma imagem é gerada nem deployada.
+  # ═══════════════════════════════════════════════════════════════
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Instala o .NET 8 SDK no runner do GitHub.
+      # Necessário para compilar e testar o projeto antes de dockerizar.
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Restaura as dependências NuGet da solução.
+      - name: Restore dependencies
+        run: dotnet restore ./SolidarityConnection.sln
+
+      # Compila a solução em modo Release.
+      # --no-restore: já restauramos no passo anterior, evita repetição.
+      # Se houver erro de compilação, o job para aqui.
+      - name: Build
+        run: dotnet build ./SolidarityConnection.sln --configuration Release --no-restore
+
+      # Roda todos os projetos de teste encontrados na solução.
+      # --no-build: já compilamos acima.
+      # Se qualquer teste falhar, o job para e os jobs seguintes
+      # (containerização + deploy) NÃO executam.
+      - name: Run unit tests
+        run: dotnet test ./SolidarityConnection.sln --configuration Release --no-build --verbosity normal
+
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 2 — CONTAINERIZE, SCAN & PUSH
+  # Só roda se o Job 1 (build-and-test) passou.
+  # Gera as imagens Docker, escaneia por vulnerabilidades e envia
+  # ao Docker Hub com tags versionadas.
+  # ═══════════════════════════════════════════════════════════════
+  containerize-and-push:
+    name: Containerize, Scan & Push
+    runs-on: ubuntu-latest
+    # "needs" define dependência: este job só começa se o anterior terminar com sucesso
+    needs: build-and-test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Constrói a imagem da API com DUAS tags:
+      #
+      # Tag 1 → :latest
+      #   Convenção histórica. Sempre aponta para a versão mais recente.
+      #   Útil para desenvolvimento e testes rápidos.
+      #
+      # Tag 2 → :a3f8c12b... (hash do commit git)
+      #   Imutável e rastreável. Se um deploy causar problema, você sabe
+      #   EXATAMENTE qual commit gerou aquela imagem e pode fazer rollback.
+      #   Boa prática obrigatória em produção.
+      - name: Build API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./SolidarityConnection.Presentation/Dockerfile
+          target: runtime
+          # push: false — só gera a imagem localmente para escanear primeiro
+          push: false
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:latest
+            ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:${{ env.IMAGE_TAG }}
+          # load: true — carrega a imagem no Docker local do runner para o Trivy analisar
+          load: true
+
+      # ── SECURITY SCAN com Trivy ────────────────────────────────
+      # Trivy é uma ferramenta open-source da Aqua Security.
+      # Ele inspeciona a imagem Docker em busca de:
+      #   - CVEs (vulnerabilidades conhecidas) nas libs do OS e NuGet
+      #   - Secrets acidentalmente embutidos (senhas, tokens)
+      #   - Configurações inseguras
+      #
+      # severity: CRITICAL,HIGH — só falha o pipeline para problemas graves.
+      #   Você pode ajustar para incluir MEDIUM quando o projeto amadurecer.
+      #
+      # exit-code: '1' — se encontrar vulnerabilidade no nível configurado,
+      #   o job falha e o push NÃO acontece. Isso é o "gate de segurança".
+      #
+      # ignore-unfixed: true — ignora CVEs que ainda não têm correção
+      #   disponível (não adianta bloquear o deploy por algo que não pode
+      #   ser resolvido hoje).
+      - name: Security scan - API image (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:${{ env.IMAGE_TAG }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      # Só faz o push APÓS o scan passar.
+      # Publica as duas tags (latest + hash) no Docker Hub.
+      - name: Push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./SolidarityConnection.Presentation/Dockerfile
+          target: runtime
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:latest
+            ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:${{ env.IMAGE_TAG }}
+
+      # Build, scan e push da imagem de migrations (mesmo processo).
+      - name: Build Migrations image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./SolidarityConnection.Presentation/Dockerfile
+          target: migrations
+          push: false
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:migrations
+            ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:migrations-${{ env.IMAGE_TAG }}
+          load: true
+
+      - name: Security scan - Migrations image (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:migrations-${{ env.IMAGE_TAG }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      - name: Push Migrations image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./SolidarityConnection.Presentation/Dockerfile
+          target: migrations
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:migrations
+            ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:migrations-${{ env.IMAGE_TAG }}
+
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 3 — DEPLOY
+  # Só roda se o Job 2 (containerize-and-push) passou.
+  # Aplica os manifestos no EKS com Rolling Update (zero downtime).
+  # ═══════════════════════════════════════════════════════════════
+  deploy:
+    name: Deploy to EKS
+    runs-on: ubuntu-latest
+    needs: containerize-and-push
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.32.0'
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ env.EKS_CLUSTER_NAME }} \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Apply namespace and configmap
+        run: |
+          kubectl apply -f namespace.yaml
+          kubectl apply -f configmap.yaml
+
+      - name: Create or update Kubernetes Secret
+        run: |
+          kubectl create secret generic solidarity-connection-api-secret \
+            --namespace=${{ env.NAMESPACE }} \
+            --from-literal=ConnectionStrings__DefaultConnection="${{ secrets.SOLIDARITY_CONNECTION_DB_CONNECTION_STRING }}" \
+            --from-literal=Jwt__SecretKey="${{ secrets.JWT_SECRET_KEY }}" \
+            --from-literal=AdminSeed__Password="${{ secrets.ADMIN_SEED_PASSWORD }}" \
+            --from-literal=RabbitMQ__Host="${{ secrets.RABBITMQ_HOST }}" \
+            --from-literal=RabbitMQ__Port="${{ secrets.RABBITMQ_PORT }}" \
+            --from-literal=RabbitMQ__Username="${{ secrets.RABBITMQ_USERNAME }}" \
+            --from-literal=RabbitMQ__Password="${{ secrets.RABBITMQ_PASSWORD }}" \
+            --from-literal=AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            --from-literal=AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            --from-literal=AWS_SESSION_TOKEN="${{ secrets.AWS_SESSION_TOKEN }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Delete old migration job if exists
+        run: |
+          kubectl delete job solidarity-connection-api-migration \
+            -n ${{ env.NAMESPACE }} \
+            --ignore-not-found=true
+
+      # Usa sed para injetar a tag versionada DENTRO do YAML antes de aplicar.
+      # Jobs do Kubernetes têm pod template imutável — não é possível alterar
+      # a imagem depois que o Job foi criado (kubectl set image falha com
+      # "field is immutable"). Por isso substituímos a tag antes do apply,
+      # fazendo o Job já nascer com a imagem certa deste commit.
+      - name: Run database migration
+        run: |
+          sed -i "s|image:.*solidarity-connection-api-image:migrations.*|image: ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:migrations-${{ env.IMAGE_TAG }}|" \
+            migration-job.yaml
+
+          kubectl apply -f migration-job.yaml
+
+          kubectl wait --for=condition=complete \
+            job/solidarity-connection-api-migration \
+            -n ${{ env.NAMESPACE }} \
+            --timeout=120s
+
+      # ── ROLLING UPDATE ──────────────────────────────────────────
+      # "kubectl set image" atualiza APENAS a tag da imagem no
+      # deployment, sem precisar editar o arquivo YAML.
+      #
+      # O Kubernetes então executa o Rolling Update automaticamente:
+      #   1. Sobe 1 pod novo com a imagem nova (maxSurge: 1)
+      #   2. Espera ele ficar Ready (readinessProbe passa)
+      #   3. Derruba 1 pod antigo (maxUnavailable: 0)
+      #   4. Repete até todos os pods estarem atualizados
+      #
+      # Durante esse processo a aplicação nunca fica fora do ar —
+      # sempre há pelo menos 2 pods respondendo requisições.
+      # Para Deployments (diferente de Jobs) o pod template É mutável,
+      # por isso kubectl set image funciona aqui sem problemas.
+      - name: Deploy application (Rolling Update)
+        run: |
+          kubectl apply -f deployment.yaml
+          kubectl apply -f service.yaml
+
+          kubectl set image deployment/solidarity-connection-api \
+            solidarity-connection-api=${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:${{ env.IMAGE_TAG }} \
+            -n ${{ env.NAMESPACE }}
+
+          kubectl rollout status deployment/solidarity-connection-api \
+            -n ${{ env.NAMESPACE }} \
+            --timeout=180s
+
+      - name: Show deployment status
+        if: always()
+        run: |
+          echo "========== PODS =========="
+          kubectl get pods -n ${{ env.NAMESPACE }} -o wide
+          echo "========== SERVICES =========="
+          kubectl get svc -n ${{ env.NAMESPACE }}
+          echo "========== IMAGEM DEPLOYADA =========="
+          kubectl get deployment solidarity-connection-api -n ${{ env.NAMESPACE }} \
+            -o jsonpath='{.spec.template.spec.containers[0].image}'
+          echo ""
+          echo "========== EVENTOS =========="
+          kubectl get events -n ${{ env.NAMESPACE }} --sort-by='.lastTimestamp' | tail -20
