@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: solidarity-connection-api-migration
+  namespace: solidarity-connection-namespace
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: solidarity-connection-api-migration
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: solidarity-connection-api-migration
+          image: daiana2026dev/solidarity-connection-api-image:migrations
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: solidarity-connection-api-config
+            - secretRef:
+                name: solidarity-connection-api-secret
