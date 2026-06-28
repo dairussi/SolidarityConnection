@@ -6,7 +6,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  EKS_CLUSTER_NAME: CHANGE_ME_EKS_CLUSTER_NAME
+  EKS_CLUSTER_NAME: solidarity-connection-eks
   NAMESPACE: solidarity-connection-namespace
   # Define a tag de versão uma vez aqui.
   # github.sha é o hash do commit (ex: a3f8c12b).
