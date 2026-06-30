@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: solidarity-connection-api-service
+  namespace: solidarity-connection-namespace
+spec:
+  type: LoadBalancer
+  selector:
+    app: solidarity-connection-api
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080

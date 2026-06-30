@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11911.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolidarityConnection.Application", "SolidarityConnection.Application\SolidarityConnection.Application.csproj", "{4E9AE14C-57E5-4ED1-A6B7-4A611A36CF5F}"
 EndProject
@@ -11,13 +11,19 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolidarityConnection.Infras
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolidarityConnection.Presentation", "SolidarityConnection.Presentation\SolidarityConnection.Presentation.csproj", "{A7483AE7-89CA-4EF9-AC32-41D3346004E0}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "k8s", "k8s", "{919BFB89-A39E-4C78-BF1A-667E758F1A3B}"
+	ProjectSection(SolutionItems) = preProject
+		configmap.yaml = configmap.yaml
+		deployment.yaml = deployment.yaml
+		migration-job.yaml = migration-job.yaml
+		namespace.yaml = namespace.yaml
+		service.yaml = service.yaml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{4E9AE14C-57E5-4ED1-A6B7-4A611A36CF5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -36,5 +42,11 @@ Global
 		{A7483AE7-89CA-4EF9-AC32-41D3346004E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A7483AE7-89CA-4EF9-AC32-41D3346004E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A7483AE7-89CA-4EF9-AC32-41D3346004E0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {397AE884-8701-44FE-B1BF-D1EB5C992478}
 	EndGlobalSection
 EndGlobal
