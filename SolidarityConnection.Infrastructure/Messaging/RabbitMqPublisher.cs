@@ -1,13 +1,20 @@
 using Microsoft.Extensions.Options;
+using OpenTelemetry;
+using OpenTelemetry.Context.Propagation;
 using RabbitMQ.Client;
 using SolidarityConnection.Application.Common.Interfaces;
 using SolidarityConnection.Infrastructure.Options;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
 namespace SolidarityConnection.Infrastructure.Messaging;
+
 public sealed class RabbitMqPublisher : IMessagePublisher, IDisposable
 {
+    private static readonly ActivitySource ActivitySource = new("SolidarityConnection.RabbitMq");
+    private static readonly TextMapPropagator Propagator = Propagators.DefaultTextMapPropagator;
+
     private readonly IConnection _connection;
     private readonly IModel _channel;
 
@@ -32,6 +39,10 @@ public sealed class RabbitMqPublisher : IMessagePublisher, IDisposable
         string queueName,
         CancellationToken cancellationToken)
     {
+        using var activity = ActivitySource.StartActivity(
+            $"{queueName} publish",
+            ActivityKind.Producer);
+
         _channel.QueueDeclare(
             queue: queueName,
             durable: true,
@@ -44,6 +55,19 @@ public sealed class RabbitMqPublisher : IMessagePublisher, IDisposable
 
         var props = _channel.CreateBasicProperties();
         props.Persistent = true;
+        props.Headers = new Dictionary<string, object>();
+
+        if (activity is not null)
+        {
+            activity.SetTag("messaging.system", "rabbitmq");
+            activity.SetTag("messaging.destination", queueName);
+            activity.SetTag("messaging.operation", "publish");
+
+            Propagator.Inject(
+                new PropagationContext(activity.Context, Baggage.Current),
+                props.Headers,
+                InjectTraceContext);
+        }
 
         _channel.BasicPublish(
             exchange: string.Empty,
@@ -52,6 +76,14 @@ public sealed class RabbitMqPublisher : IMessagePublisher, IDisposable
             body: body);
 
         return Task.CompletedTask;
+    }
+
+    private static void InjectTraceContext(
+        IDictionary<string, object> headers,
+        string key,
+        string value)
+    {
+        headers[key] = Encoding.UTF8.GetBytes(value);
     }
 
     public void Dispose()
