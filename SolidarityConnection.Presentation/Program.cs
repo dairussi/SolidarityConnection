@@ -1,9 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Prometheus;
 using SolidarityConnection.Infrastructure.DI;
 using SolidarityConnection.Infrastructure.Persistence;
 using SolidarityConnection.Infrastructure.Persistence.Bootstrap;
 using SolidarityConnection.Infrastructure.Persistence.Seeds;
+using Prometheus.DotNetRuntime;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -43,6 +48,25 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+// Métricas de runtime .NET (GC, threads, memória)
+DotNetRuntimeStatsBuilder.Customize().StartCollecting();
+
+const string serviceName = "SolidarityConnection.API";
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(serviceName))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddSource("SolidarityConnection.RabbitMq")
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri(
+                    builder.Configuration["Jaeger:OtlpEndpoint"] ?? "http://localhost:4317");
+            });
+    });
 
 var app = builder.Build();
 app.UseSwagger();
@@ -52,7 +76,16 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Middleware do Prometheus — deve vir antes do MapControllers
+app.UseHttpMetrics();
+
 app.MapControllers();
+
+// Endpoint /metrics para o Prometheus fazer scrape
+app.MapMetrics();
+
+// Endpoint /health
+app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
 {
