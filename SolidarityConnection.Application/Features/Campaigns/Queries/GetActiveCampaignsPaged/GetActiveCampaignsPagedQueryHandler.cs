@@ -10,7 +10,7 @@ public sealed class GetActiveCampaignsPagedQueryHandler(
     ICampaignRepository campaignRepository) : IGetActiveCampaignsPagedQueryHandler
 {
 
-    public async Task<ResultData<PagedResult<CampaignOutput>>> Handle(
+    public async Task<ResultData<PagedResult<CampaignSummaryOutput>>> Handle(
         GetActiveCampaignsPagedQuery query,
         CancellationToken cancellationToken)
     {
@@ -19,14 +19,14 @@ public sealed class GetActiveCampaignsPagedQueryHandler(
             query.PageSize,
             cancellationToken);
 
-        var pagedResult = new PagedResult<CampaignOutput>
+        var pagedResult = new PagedResult<CampaignSummaryOutput>
         {
-            Items = items.ToOutput().ToList(),
+            Items = items.ToSummaryOutput().ToList(),
             Page = query.Page,
             PageSize = query.PageSize,
             TotalCount = totalCount
         };
 
-        return ResultData<PagedResult<CampaignOutput>>.Success(pagedResult);
+        return ResultData<PagedResult<CampaignSummaryOutput>>.Success(pagedResult);
     }
 }

@@ -6,7 +6,7 @@ namespace SolidarityConnection.Application.Features.Campaigns.Queries.GetActiveC
 
 public interface IGetActiveCampaignsPagedQueryHandler
 {
-    Task<ResultData<PagedResult<CampaignOutput>>> Handle(
+    Task<ResultData<PagedResult<CampaignSummaryOutput>>> Handle(
         GetActiveCampaignsPagedQuery query,
         CancellationToken cancellationToken);
 }
