@@ -147,19 +147,30 @@ jobs:
           kubectl apply -f configmap.yaml
 
       - name: Create or update Kubernetes Secret
+        env:
+          DB_CONNECTION_STRING: ${{ secrets.SOLIDARITY_CONNECTION_DB_CONNECTION_STRING }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          ADMIN_SEED_PASSWORD: ${{ secrets.ADMIN_SEED_PASSWORD }}
+          RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}
+          RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}
+          RABBITMQ_USERNAME: ${{ secrets.RABBITMQ_USERNAME }}
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+          AWS_ACCESS_KEY_ID_SECRET: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY_SECRET: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN_SECRET: ${{ secrets.AWS_SESSION_TOKEN }}
         run: |
           kubectl create secret generic solidarity-connection-api-secret \
             --namespace=${{ env.NAMESPACE }} \
-            --from-literal=ConnectionStrings__DefaultConnection="${{ secrets.SOLIDARITY_CONNECTION_DB_CONNECTION_STRING }}" \
-            --from-literal=Jwt__SecretKey="${{ secrets.JWT_SECRET_KEY }}" \
-            --from-literal=AdminSeed__Password="${{ secrets.ADMIN_SEED_PASSWORD }}" \
-            --from-literal=RabbitMQ__Host="${{ secrets.RABBITMQ_HOST }}" \
-            --from-literal=RabbitMQ__Port="${{ secrets.RABBITMQ_PORT }}" \
-            --from-literal=RabbitMQ__Username="${{ secrets.RABBITMQ_USERNAME }}" \
-            --from-literal=RabbitMQ__Password="${{ secrets.RABBITMQ_PASSWORD }}" \
-            --from-literal=AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
-            --from-literal=AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-            --from-literal=AWS_SESSION_TOKEN="${{ secrets.AWS_SESSION_TOKEN }}" \
+            --from-literal=ConnectionStrings__DefaultConnection="$DB_CONNECTION_STRING" \
+            --from-literal=Jwt__SecretKey="$JWT_SECRET_KEY" \
+            --from-literal=AdminSeed__Password="$ADMIN_SEED_PASSWORD" \
+            --from-literal=RabbitMQ__Host="$RABBITMQ_HOST" \
+            --from-literal=RabbitMQ__Port="$RABBITMQ_PORT" \
+            --from-literal=RabbitMQ__Username="$RABBITMQ_USERNAME" \
+            --from-literal=RabbitMQ__Password="$RABBITMQ_PASSWORD" \
+            --from-literal=AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID_SECRET" \
+            --from-literal=AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY_SECRET" \
+            --from-literal=AWS_SESSION_TOKEN="$AWS_SESSION_TOKEN_SECRET" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Delete old migration job if exists
@@ -169,6 +180,8 @@ jobs:
             --ignore-not-found=true
 
       - name: Run database migration
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
           set -euo pipefail
 
@@ -188,7 +201,7 @@ jobs:
             done
           }
 
-          sed -i "s|image:.*solidarity-connection-api-image:migrations.*|image: ${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:migrations-${{ env.IMAGE_TAG }}|" \
+          sed -i "s|image:.*solidarity-connection-api-image:migrations.*|image: ${DOCKER_USERNAME}/solidarity-connection-api-image:migrations-${{ env.IMAGE_TAG }}|" \
             migration-job.yaml
 
           kubectl apply -f migration-job.yaml
@@ -220,12 +233,14 @@ jobs:
           exit 1
 
       - name: Deploy application (Rolling Update)
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
           kubectl apply -f deployment.yaml
           kubectl apply -f service.yaml
 
           kubectl set image deployment/solidarity-connection-api \
-            solidarity-connection-api=${{ secrets.DOCKER_USERNAME }}/solidarity-connection-api-image:${{ env.IMAGE_TAG }} \
+            solidarity-connection-api=${DOCKER_USERNAME}/solidarity-connection-api-image:${{ env.IMAGE_TAG }} \
             -n ${{ env.NAMESPACE }}
 
           kubectl rollout status deployment/solidarity-connection-api \

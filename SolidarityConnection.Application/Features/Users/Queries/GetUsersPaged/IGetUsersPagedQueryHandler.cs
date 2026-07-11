@@ -1,4 +1,3 @@
-using FCG.Catalog.Application.Common;
 using SolidarityConnection.Application.Common;
 using SolidarityConnection.Application.Features.Users.Outputs;
 
