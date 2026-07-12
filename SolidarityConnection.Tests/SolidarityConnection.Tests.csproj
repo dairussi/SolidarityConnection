@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SolidarityConnection.Application\SolidarityConnection.Application.csproj" />
     <ProjectReference Include="..\SolidarityConnection.Domain\SolidarityConnection.Domain.csproj" />
+    <ProjectReference Include="..\SolidarityConnection.Infrastructure\SolidarityConnection.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

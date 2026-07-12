@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Quartz;
 using SolidarityConnection.Application.Common.Interfaces;
 using SolidarityConnection.Application.Features.Auth.Queries.Login;
 using SolidarityConnection.Application.Features.Campaigns.Commands.CreateCampaign;
@@ -47,6 +48,14 @@ public static class DependencyInjection
         }, ServiceLifetime.Scoped);
 
         services.Configure<RabbitMqOptions>(configuration.GetSection("RabbitMQ"));
+        services.Configure<PendingDonationReprocessingOptions>(
+            configuration.GetSection("BackgroundJobs:PendingDonationReprocessing"));
+
+        var pendingDonationReprocessingOptions =
+            configuration
+                .GetSection("BackgroundJobs:PendingDonationReprocessing")
+                .Get<PendingDonationReprocessingOptions>()
+            ?? new PendingDonationReprocessingOptions();
 
         services.AddScoped<ICampaignRepository, CampaignRepository>();
         services.AddScoped<IDonationRepository, DonationRepository>();
@@ -70,9 +79,24 @@ public static class DependencyInjection
         services.AddScoped<IGetCampaignsPagedQueryHandler, GetCampaignsPagedQueryHandler>();
         services.AddScoped<IGetActiveCampaignsPagedQueryHandler, GetActiveCampaignsPagedQueryHandler>();
         services.AddScoped<ICreateDonationCommandHandler, CreateDonationCommandHandler>();
+        services.AddScoped<IDonationPaymentDispatcher, DonationPaymentDispatcher>();
         services.AddScoped<DonationProcessedConsumer>();
         services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
         services.AddHostedService<RabbitMqDonationProcessedConsumerHostedService>();
+        services.AddQuartz(quartz =>
+        {
+            var jobKey = new JobKey(nameof(PendingDonationReprocessingJob));
+
+            quartz.AddJob<PendingDonationReprocessingJob>(options => options.WithIdentity(jobKey));
+            quartz.AddTrigger(options => options
+                .ForJob(jobKey)
+                .WithIdentity($"{nameof(PendingDonationReprocessingJob)}-trigger")
+                .StartNow()
+                .WithSimpleSchedule(schedule => schedule
+                    .WithInterval(TimeSpan.FromMinutes(Math.Max(1, pendingDonationReprocessingOptions.IntervalInMinutes)))
+                    .RepeatForever()));
+        });
+        services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
 
         var key = Encoding.ASCII.GetBytes(configuration["Jwt:SecretKey"]!);
 
