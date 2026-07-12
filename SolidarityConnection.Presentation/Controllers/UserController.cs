@@ -20,7 +20,7 @@ public class UserController(
         IGetUserByIdQueryHandler getUserByIdQueryHandler,
         IToggleUserRoleCommandHandler toggleUserRoleCommandHandler) : ControllerBase
 {
-    [HttpPost("Registration")]
+    [HttpPost("registration")]
     public async Task<IActionResult> Register(
         [FromBody] AddOrUpdateUserInput input,
         CancellationToken cancellationToken)
@@ -48,7 +48,6 @@ public class UserController(
         return Ok(result.Data);
     }
 
-    [Authorize(Roles = nameof(EUserRole.GestorONG))]
     [HttpGet("ById")]
     public async Task<IActionResult> GetById(
         [FromQuery] GetUserByIdInput input,
