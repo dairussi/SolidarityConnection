@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SolidarityConnection.Application.Common.Interfaces;
+using SolidarityConnection.Domain.Donation.Enums;
 using SolidarityConnection.Domain.Donation.Models;
 using SolidarityConnection.Infrastructure.Persistence;
 
@@ -17,6 +18,15 @@ public sealed class DonationRepository(AppDbContext context) : IDonationReposito
     {
         return await context.Donations
             .FirstOrDefaultAsync(donation => donation.Id == donationId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Donation>> ListPendingAsync(CancellationToken cancellationToken)
+    {
+        return await context.Donations
+            .AsNoTracking()
+            .Where(donation => donation.Status == DonationStatus.Pending)
+            .OrderBy(donation => donation.CreatedAt)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task UpdateAsync(Donation donation, CancellationToken cancellationToken)
