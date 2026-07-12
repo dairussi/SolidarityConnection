@@ -1,4 +1,4 @@
-namespace FCG.Catalog.Application.Common;
+namespace SolidarityConnection.Application.Common;
 
 public class PagedResult<T>
 {
