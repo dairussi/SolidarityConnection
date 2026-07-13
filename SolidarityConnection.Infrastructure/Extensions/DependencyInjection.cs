@@ -15,6 +15,7 @@ using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignByI
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaigns;
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignsPaged;
 using SolidarityConnection.Application.Features.Donations.Commands.CreateDonation;
+using SolidarityConnection.Application.Features.Donations.Queries.GetMyTotalsByCampaign;
 using SolidarityConnection.Application.Features.Users.Commands.AddUser;
 using SolidarityConnection.Application.Features.Users.Commands.ToggleUserRole;
 using SolidarityConnection.Application.Features.Users.Queries.GetUserById;
@@ -79,6 +80,7 @@ public static class DependencyInjection
         services.AddScoped<IGetCampaignsPagedQueryHandler, GetCampaignsPagedQueryHandler>();
         services.AddScoped<IGetActiveCampaignsPagedQueryHandler, GetActiveCampaignsPagedQueryHandler>();
         services.AddScoped<ICreateDonationCommandHandler, CreateDonationCommandHandler>();
+        services.AddScoped<IGetMyTotalsByCampaignQueryHandler, GetMyTotalsByCampaignQueryHandler>();
         services.AddScoped<IDonationPaymentDispatcher, DonationPaymentDispatcher>();
         services.AddScoped<DonationProcessedConsumer>();
         services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
