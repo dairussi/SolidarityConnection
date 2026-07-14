@@ -1,0 +1,7 @@
+interface:
+  display_name: "Solidarity MudBlazor Docs"
+  short_description: "MudBlazor docs e componentes do projeto"
+  default_prompt: "Use $solidarity-mudblazor-docs para escolher componentes MudBlazor neste projeto."
+
+policy:
+  allow_implicit_invocation: true

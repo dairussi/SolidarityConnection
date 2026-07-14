@@ -1,0 +1,153 @@
+<article class="campaign-card">
+    <div class="campaign-card-top">
+        <span class="campaign-badge">Campanha ativa</span>
+        <span class="campaign-progress-label">@ProgressText</span>
+    </div>
+
+    <div class="campaign-copy">
+        <h2 class="campaign-title">@Campaign.Title</h2>
+        <p class="campaign-description">
+            Apoie esta mobilizacao e acompanhe a meta sendo alcancada junto com a comunidade.
+        </p>
+    </div>
+
+    <div class="campaign-progress">
+        <div class="campaign-progress-bar">
+            <span class="campaign-progress-fill" style="@($"width: {ProgressPercentage:F0}%;")"></span>
+        </div>
+    </div>
+
+    <dl class="campaign-values">
+        <div>
+            <dt>Arrecadado</dt>
+            <dd>@FormatCurrency(Campaign.AmountRaised)</dd>
+        </div>
+        <div>
+            <dt>Meta</dt>
+            <dd>@FormatCurrency(Campaign.TargetAmount)</dd>
+        </div>
+    </dl>
+</article>
+
+<style>
+    .campaign-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        padding: 1.5rem;
+        border-radius: 1.5rem;
+        border: 1px solid #e9d5ff;
+        background: #fff;
+        box-shadow: 0 8px 24px rgba(109, 40, 217, 0.06);
+    }
+
+    .campaign-card-top,
+    .campaign-values {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .campaign-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 2rem;
+        padding: 0 0.85rem;
+        border-radius: 999px;
+        background: #ede9fe;
+        color: #6d28d9;
+        font-size: 0.82rem;
+        font-weight: 800;
+    }
+
+    .campaign-progress-label {
+        color: #6b7280;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .campaign-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+    }
+
+    .campaign-title {
+        margin: 0;
+        font-size: 1.28rem;
+        line-height: 1.2;
+        color: #111827;
+    }
+
+    .campaign-description {
+        margin: 0;
+        color: #6b7280;
+        line-height: 1.65;
+    }
+
+    .campaign-progress {
+        margin-top: auto;
+    }
+
+    .campaign-progress-bar {
+        width: 100%;
+        height: 0.8rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #ede9fe;
+    }
+
+    .campaign-progress-fill {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: #6d28d9;
+    }
+
+    .campaign-values {
+        margin: 0;
+    }
+
+    .campaign-values div {
+        min-width: 0;
+    }
+
+    .campaign-values dt {
+        margin-bottom: 0.35rem;
+        color: #6b7280;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+
+    .campaign-values dd {
+        margin: 0;
+        color: #111827;
+        font-size: 1rem;
+        font-weight: 800;
+    }
+
+    @@media (max-width: 640px) {
+        .campaign-card-top,
+        .campaign-values {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired]
+    public CampaignSummaryModel Campaign { get; set; } = default!;
+
+    private decimal ProgressPercentage
+        => Campaign.TargetAmount <= 0
+            ? 0
+            : Math.Min(100, Math.Round(Campaign.AmountRaised / Campaign.TargetAmount * 100, 0));
+
+    private string ProgressText => $"{ProgressPercentage:F0}% da meta";
+
+    private static string FormatCurrency(decimal value)
+        => value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+}

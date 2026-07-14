@@ -1,0 +1,270 @@
+@page "/"
+@inject HttpClient Http
+@inject AppSessionService Session
+
+<PageTitle>Conexao Solidaria | Campanhas</PageTitle>
+
+<div class="home-shell">
+    <div class="home-stage">
+        <section class="home-panel">
+            <div class="home-copy">
+                <MudText Typo="Typo.h4" HtmlTag="h1" Class="home-heading">Campanhas em destaque</MudText>
+                <MudText Typo="Typo.body1" Class="home-description">
+                    Acompanhe as campanhas ativas e encontre rapidamente onde sua ajuda pode gerar mais impacto.
+                </MudText>
+            </div>
+
+            @if (_isLoading)
+            {
+                <div class="campaign-grid">
+                    @for (var index = 0; index < 3; index++)
+                    {
+                        <div class="campaign-skeleton"></div>
+                    }
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @_errorMessage
+                </MudAlert>
+            }
+            else if (_campaigns.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                    Nenhuma campanha ativa foi encontrada no momento.
+                </MudAlert>
+            }
+            else
+            {
+                <div class="campaign-grid">
+                    @foreach (var campaign in _campaigns)
+                    {
+                        <CampaignCard Campaign="campaign" />
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+<style>
+    .home-shell {
+        flex: 1 1 auto;
+        min-height: 100%;
+        width: 100%;
+        display: flex;
+        padding: 0;
+        margin: 0;
+        background: #fff;
+    }
+
+    .home-stage {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        width: 100%;
+        min-height: 100%;
+        background: #fff;
+    }
+
+    .home-panel {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        padding: 2.5rem 3rem 3rem;
+        box-sizing: border-box;
+    }
+
+    .home-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .home-kicker {
+        color: #6d28d9;
+        letter-spacing: 0.08em;
+        font-size: 18px;
+    }
+
+    .home-heading {
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .home-description {
+        color: #6b7280;
+        max-width: 520px;
+    }
+
+    .campaign-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.25rem;
+    }
+
+    .campaign-skeleton {
+        min-height: 240px;
+        border-radius: 1.5rem;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.48) 25%, rgba(237, 233, 254, 0.92) 50%, rgba(255, 255, 255, 0.48) 75%);
+        background-size: 400% 100%;
+        animation: shimmer 1.5s infinite linear;
+        border: 1px solid #e9d5ff;
+    }
+
+    @@keyframes shimmer {
+        0% {
+            background-position: 100% 0;
+        }
+
+        100% {
+            background-position: -100% 0;
+        }
+    }
+
+    .home-brand-circle-shell {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .home-brand-circle {
+        width: 280px;
+        height: 280px;
+        border-radius: 50%;
+        overflow: hidden;
+        background-color: #6d28d9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .home-brand-logo-mask {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .home-brand-logo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scale(1.2);
+        transform-origin: center;
+    }
+
+    .home-status-card {
+        width: 100%;
+        max-width: 360px;
+        margin-top: 32px;
+        padding: 24px;
+        border-radius: 24px;
+        background: #fff;
+        box-shadow: 0 8px 24px rgba(109, 40, 217, 0.08);
+    }
+
+    @@media (max-width: 1100px) {
+        .campaign-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .home-stage {
+            min-height: 100%;
+        }
+
+        .home-panel {
+            padding: 2rem 1.25rem 2.5rem;
+        }
+
+        .home-brand-circle {
+            width: 220px;
+            height: 220px;
+        }
+
+        .campaign-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private readonly List<CampaignSummaryModel> _campaigns = [];
+    private string? _errorMessage;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureInitializedAsync();
+        await LoadCampaignsAsync();
+    }
+
+    private async Task LoadCampaignsAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/Campaign/active?page=1&pageSize=12");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<PagedResult<CampaignSummaryModel>>();
+                _campaigns.Clear();
+
+                if (result?.Items is not null)
+                {
+                    _campaigns.AddRange(result.Items);
+                }
+
+                return;
+            }
+
+            _errorMessage = "Nao foi possivel carregar as campanhas agora.";
+        }
+        catch
+        {
+            _errorMessage = "Nao foi possivel se conectar ao servidor no momento.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetHeroLabel()
+    {
+        if (Session.IsAdmin)
+        {
+            return "Acesso de gestor";
+        }
+
+        if (Session.IsAuthenticated)
+        {
+            return "Perfil de usuario";
+        }
+
+        return "Visitante";
+    }
+
+    private string GetHeroDescription()
+    {
+        if (Session.IsAdmin)
+        {
+            return "Seu menu mostra o nome, o avatar por inicial e o atalho extra para cadastrar campanhas.";
+        }
+
+        if (Session.IsAuthenticated)
+        {
+            return "Seu nome e avatar ficam visiveis no menu, mantendo o foco principal nas campanhas.";
+        }
+
+        return "Quem ainda nao entrou no sistema ve apenas o perfil generico e o atalho para cadastro.";
+    }
+}

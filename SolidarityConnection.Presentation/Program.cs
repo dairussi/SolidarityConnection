@@ -73,6 +73,8 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
+app.UseBlazorFrameworkFiles();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -86,6 +88,7 @@ app.MapMetrics();
 
 // Endpoint /health
 app.MapHealthChecks("/health");
+app.MapFallbackToFile("index.html");
 
 using (var scope = app.Services.CreateScope())
 {
