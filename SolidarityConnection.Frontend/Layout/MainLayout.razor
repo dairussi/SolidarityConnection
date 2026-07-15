@@ -3,12 +3,12 @@
 @inject NavigationManager Navigation
 
 <div class="app-layout">
-    @if (!IsLoginRoute)
+    @if (!IsAuthRoute)
     {
         <AppMenu />
     }
 
-    <main class="app-main @(IsLoginRoute ? "app-main-login" : string.Empty)">
+    <main class="app-main @(IsAuthRoute ? "app-main-login" : string.Empty)">
         <div class="app-page-host">
             @Body
         </div>
@@ -17,7 +17,7 @@
 
 <style>
     .app-layout {
-        --app-menu-height: 4.5rem;
+        --app-menu-height: 3.9rem;
         min-height: 100vh;
         display: flex;
         flex-direction: column;
@@ -50,10 +50,16 @@
 </style>
 
 @code {
-    private bool IsLoginRoute => string.Equals(
-        Navigation.ToBaseRelativePath(Navigation.Uri).Trim('/'),
-        "login",
-        StringComparison.OrdinalIgnoreCase);
+    private bool IsAuthRoute
+    {
+        get
+        {
+            var route = Navigation.ToBaseRelativePath(Navigation.Uri).Trim('/');
+
+            return string.Equals(route, "login", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(route, "cadastro", StringComparison.OrdinalIgnoreCase);
+        }
+    }
 
     protected override void OnInitialized()
     {

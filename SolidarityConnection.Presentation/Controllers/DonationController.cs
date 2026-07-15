@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using SolidarityConnection.Application.Common.Interfaces;
 using SolidarityConnection.Application.Features.Donations.Commands.CreateDonation;
 using SolidarityConnection.Application.Features.Donations.Commands.CreateDonation.Inputs;
-using SolidarityConnection.Domain.Common.Enums;
 
 namespace SolidarityConnection.Presentation.Controllers;
 [ApiController]

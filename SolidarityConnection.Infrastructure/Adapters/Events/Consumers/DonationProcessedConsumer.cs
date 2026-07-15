@@ -34,6 +34,24 @@ public sealed class DonationProcessedConsumer(
             return;
         }
 
+        if (donation.Status == donationStatus)
+        {
+            logger.LogInformation(
+                "Evento duplicado ignorado para a doação {DonationId}. Status atual já é {Status}.",
+                donation.Id,
+                donation.Status);
+            return;
+        }
+
+        if (donation.Status == DonationStatus.Paid && donationStatus != DonationStatus.Paid)
+        {
+            logger.LogWarning(
+                "Evento antigo ignorado para a doação {DonationId}. A doação já está paga e recebeu o status {ReceivedStatus}.",
+                donation.Id,
+                donationStatus);
+            return;
+        }
+
         var wasPaid = donation.Status == DonationStatus.Paid;
         donation.UpdateStatus(donationStatus, donationProcessedEvent.ProcessedAt);
 
