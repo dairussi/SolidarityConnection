@@ -105,7 +105,12 @@ public class CampaignController(
         var result = await deleteCampaignCommandHandler.Handle(new DeleteCampaignCommand(id), cancellationToken);
 
         if (!result.IsSuccess)
-            return NotFound(new { message = result.ErrorMessage });
+        {
+            var error = new { message = result.ErrorMessage };
+            return result.ErrorMessage == "Campanha não encontrada."
+                ? NotFound(error)
+                : BadRequest(error);
+        }
 
         return NoContent();
     }

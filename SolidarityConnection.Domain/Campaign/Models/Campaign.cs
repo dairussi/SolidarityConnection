@@ -61,6 +61,11 @@ public class Campaign
         Status = CampaignStatus.Closed;
     }
 
+    public void ActivateCampaign()
+    {
+        Status = CampaignStatus.Active;
+    }
+
     public void PauseCampaign()
     {
         if (Status == CampaignStatus.Closed)

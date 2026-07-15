@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject HttpClient Http
 @inject AppSessionService Session
+@inject ISnackbar Snackbar
 
 <PageTitle>Conexão Solidária | Campanhas</PageTitle>
 
@@ -41,13 +42,116 @@
                 <div class="campaign-grid">
                     @foreach (var campaign in _campaigns)
                     {
-                        <CampaignCard Campaign="campaign" />
+                        var isStatusBusy = _campaignsUpdatingStatus.Contains(campaign.Id);
+                        var isDeleteBusy = _campaignsDeleting.Contains(campaign.Id);
+
+                        <article class="campaign-shell">
+                            <CampaignCard Campaign="campaign" />
+
+                            @if (Session.IsAdmin)
+                            {
+                                <div class="campaign-admin-actions">
+                                    <MudMenu Label="@GetStatusActionLabel(campaign)"
+                                             Variant="Variant.Text"
+                                             Color="Color.Default"
+                                             Dense="true"
+                                             EndIcon="@Icons.Material.Filled.ExpandMore"
+                                             Class="campaign-admin-menu"
+                                             Disabled="@(isStatusBusy || isDeleteBusy)">
+                                        <MudMenuItem Disabled="@(isStatusBusy || isDeleteBusy || IsCurrentStatus(campaign, 1))"
+                                                     OnClick="() => ChangeCampaignStatusAsync(campaign, 1)">
+                                            Definir como ativa
+                                        </MudMenuItem>
+                                        <MudMenuItem Disabled="@(isStatusBusy || isDeleteBusy || IsCurrentStatus(campaign, 2))"
+                                                     OnClick="() => ChangeCampaignStatusAsync(campaign, 2)">
+                                            Definir como pausada
+                                        </MudMenuItem>
+                                        <MudMenuItem Disabled="@(isStatusBusy || isDeleteBusy || IsCurrentStatus(campaign, 3))"
+                                                     OnClick="() => ChangeCampaignStatusAsync(campaign, 3)">
+                                            Definir como encerrada
+                                        </MudMenuItem>
+                                    </MudMenu>
+
+                                    <MudButton Variant="Variant.Text"
+                                               Color="Color.Error"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.DeleteOutline"
+                                               Class="campaign-admin-button"
+                                               OnClick="() => OpenDeleteModal(campaign.Id)"
+                                               Disabled="@(isStatusBusy || isDeleteBusy)">
+                                        Excluir
+                                    </MudButton>
+
+                                    @if (isStatusBusy || isDeleteBusy)
+                                    {
+                                        <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" Class="campaign-admin-loader" />
+                                    }
+                                </div>
+                            }
+                        </article>
                     }
                 </div>
             }
         </section>
     </div>
 </div>
+
+@if (PendingDeleteCampaign is not null)
+{
+    <div class="campaign-admin-modal-backdrop" @onclick="CloseDeleteModal"></div>
+
+    <section class="campaign-admin-modal-shell" aria-modal="true" role="dialog" aria-label="Confirmar exclusão da campanha">
+        <div class="campaign-admin-modal-card" @onclick:stopPropagation="true">
+            <div class="campaign-admin-modal-header">
+                <div>
+                    <p class="campaign-admin-modal-kicker">Excluir campanha</p>
+                    <h3 class="campaign-admin-modal-title">Confirmar exclusão da campanha?</h3>
+                </div>
+
+                <button type="button" class="campaign-admin-modal-close" @onclick="CloseDeleteModal" aria-label="Fechar modal">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                </button>
+            </div>
+
+            <p class="campaign-admin-modal-copy">
+                Você está prestes a excluir <strong>@PendingDeleteCampaign.Title</strong>.
+            </p>
+
+            <p class="campaign-admin-modal-helper">
+                A exclusão só será concluída se o valor arrecadado estiver em R$ 0,00.
+            </p>
+
+            <div class="campaign-admin-modal-actions">
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Default"
+                           Size="Size.Small"
+                           OnClick="CloseDeleteModal"
+                           Disabled="@IsPendingDeleteBusy">
+                    Cancelar
+                </MudButton>
+
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Error"
+                           Size="Size.Small"
+                           OnClick="ConfirmDeleteAsync"
+                           Disabled="@IsPendingDeleteBusy">
+                    @if (IsPendingDeleteBusy)
+                    {
+                        <MudProgressCircular Class="me-2"
+                                             Color="Color.Inherit"
+                                             Size="Size.Small"
+                                             Indeterminate="true" />
+                        <span>Excluindo...</span>
+                    }
+                    else
+                    {
+                        <span>Confirmar</span>
+                    }
+                </MudButton>
+            </div>
+        </div>
+    </section>
+}
 
 <style>
     .home-shell {
@@ -100,6 +204,12 @@
         gap: 1.25rem;
     }
 
+    .campaign-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+
     .campaign-skeleton {
         min-height: 240px;
         border-radius: 1.5rem;
@@ -107,6 +217,151 @@
         background-size: 400% 100%;
         animation: shimmer 1.5s infinite linear;
         border: 1px solid #e9d5ff;
+    }
+
+    .campaign-admin-actions,
+    .campaign-admin-modal-header,
+    .campaign-admin-modal-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+    }
+
+    .campaign-admin-actions {
+        min-height: 1.85rem;
+        padding: 0 0.15rem;
+    }
+
+    .campaign-admin-loader {
+        margin-left: auto;
+    }
+
+    .campaign-admin-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.42);
+        z-index: 90;
+    }
+
+    .campaign-admin-modal-shell {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        z-index: 91;
+    }
+
+    .campaign-admin-modal-card {
+        width: min(100%, 29rem);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1.35rem;
+        border-radius: 1.4rem;
+        background: #fff;
+        box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
+    }
+
+    .campaign-admin-modal-header {
+        justify-content: space-between;
+    }
+    .campaign-admin-modal-kicker {
+        margin: 0 0 0.3rem;
+        color: #6b7280;
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1.2;
+        text-transform: none;
+    }
+
+    .campaign-admin-modal-title {
+        margin: 0;
+        color: #111827;
+        font-size: 1.08rem;
+        font-weight: 800;
+    }
+
+    .campaign-admin-modal-copy,
+    .campaign-admin-modal-helper {
+        margin: 0;
+        color: #6b7280;
+        line-height: 1.6;
+    }
+
+    .campaign-admin-modal-helper {
+        padding: 0.85rem 0.95rem;
+        border-radius: 1rem;
+        background: #fff7ed;
+        color: #9a3412;
+        box-shadow: inset 0 0 0 1px #fdba74;
+    }
+
+    .campaign-admin-modal-actions {
+        justify-content: flex-end;
+    }
+
+    .campaign-admin-modal-close {
+        width: 2.15rem;
+        height: 2.15rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 999px;
+        background: #f8fafc;
+        color: #6b7280;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .campaign-admin-menu.mud-button-root,
+    .campaign-admin-button.mud-button-root {
+        min-height: 1.75rem;
+        padding: 0 0.15rem;
+        border-radius: 0.45rem;
+        background: transparent;
+        box-shadow: none;
+        font-family: inherit !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        letter-spacing: normal !important;
+        line-height: 1.2 !important;
+        text-transform: none !important;
+    }
+
+    .campaign-admin-menu.mud-button-root,
+    .campaign-admin-menu .mud-button-label,
+    .campaign-admin-menu .mud-button-end-icon {
+        color: #6b7280 !important;
+        font-family: inherit !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        letter-spacing: normal !important;
+        line-height: 1.2 !important;
+        text-transform: none !important;
+    }
+
+    .campaign-admin-button.mud-button-root,
+    .campaign-admin-button .mud-button-label,
+    .campaign-admin-button .mud-button-start-icon {
+        color: #ef4444 !important;
+        font-family: inherit !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        letter-spacing: normal !important;
+        line-height: 1.2 !important;
+        text-transform: none !important;
+    }
+
+    .campaign-admin-modal-actions .mud-button-root {
+        min-height: 2.1rem;
+        border-radius: 999px;
+        padding-inline: 0.95rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: none;
     }
 
     @@keyframes shimmer {
@@ -138,18 +393,44 @@
             grid-template-columns: 1fr;
         }
     }
+
+    @@media (max-width: 640px) {
+        .campaign-admin-modal-header,
+        .campaign-admin-modal-actions {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .campaign-admin-modal-actions > * {
+            width: 100%;
+        }
+    }
 </style>
 
 @code {
     private readonly List<CampaignSummaryModel> _campaigns = [];
+    private readonly HashSet<Guid> _campaignsUpdatingStatus = [];
+    private readonly HashSet<Guid> _campaignsDeleting = [];
+
     private string? _errorMessage;
+    private Guid? _pendingDeleteCampaignId;
     private bool _isLoading = true;
     private bool? _lastAuthenticatedState;
     private bool _hasCompletedInitialLoad;
 
-    private string HomeDescription => Session.IsAuthenticated
-        ? "Acompanhe campanhas ativas, pausadas e encerradas em um único lugar."
-        : "Acompanhe as campanhas ativas e encontre rapidamente onde sua ajuda pode gerar mais impacto.";
+    private CampaignSummaryModel? PendingDeleteCampaign
+        => _pendingDeleteCampaignId is Guid campaignId
+            ? _campaigns.FirstOrDefault(campaign => campaign.Id == campaignId)
+            : null;
+
+    private bool IsPendingDeleteBusy
+        => PendingDeleteCampaign is not null && _campaignsDeleting.Contains(PendingDeleteCampaign.Id);
+
+    private string HomeDescription => Session.IsAdmin
+        ? "Acompanhe as campanhas e use os controles administrativos para atualizar status ou remover campanhas sem arrecadação."
+        : Session.IsAuthenticated
+            ? "Acompanhe campanhas ativas, pausadas e encerradas em um único lugar."
+            : "Acompanhe as campanhas ativas e encontre rapidamente onde sua ajuda pode gerar mais impacto.";
 
     private string EmptyStateMessage => Session.IsAuthenticated
         ? "Nenhuma campanha foi encontrada no momento."
@@ -173,7 +454,7 @@
         await InvokeAsync(async () =>
         {
             await LoadCampaignsAsync();
-        _hasCompletedInitialLoad = true;
+            _hasCompletedInitialLoad = true;
             StateHasChanged();
         });
     }
@@ -201,6 +482,7 @@
                     _campaigns.AddRange(result.Items);
                 }
 
+                SyncAdminState();
                 _lastAuthenticatedState = Session.IsAuthenticated;
                 return;
             }
@@ -218,8 +500,170 @@
         }
     }
 
+    private void SyncAdminState()
+    {
+        var activeCampaignIds = _campaigns.Select(campaign => campaign.Id).ToHashSet();
+
+        CleanupState(_campaignsUpdatingStatus, activeCampaignIds);
+        CleanupState(_campaignsDeleting, activeCampaignIds);
+
+        if (_pendingDeleteCampaignId is Guid campaignId && !activeCampaignIds.Contains(campaignId))
+        {
+            _pendingDeleteCampaignId = null;
+        }
+    }
+
+    private static void CleanupState(HashSet<Guid> state, HashSet<Guid> activeCampaignIds)
+    {
+        foreach (var campaignId in state.Where(campaignId => !activeCampaignIds.Contains(campaignId)).ToList())
+        {
+            state.Remove(campaignId);
+        }
+    }
+
+    private bool IsCurrentStatus(CampaignSummaryModel campaign, int status)
+        => GetCurrentStatusValue(campaign.Status) == status;
+
+    private string GetStatusActionLabel(CampaignSummaryModel campaign)
+        => $"Status: {GetStatusName(GetCurrentStatusValue(campaign.Status))}";
+
+    private void OpenDeleteModal(Guid campaignId)
+    {
+        _pendingDeleteCampaignId = campaignId;
+    }
+
+    private void CloseDeleteModal()
+    {
+        if (!IsPendingDeleteBusy)
+        {
+            _pendingDeleteCampaignId = null;
+        }
+    }
+
+    private async Task ChangeCampaignStatusAsync(CampaignSummaryModel campaign, int status)
+    {
+        if (!Session.IsAdmin || IsCurrentStatus(campaign, status) || !_campaignsUpdatingStatus.Add(campaign.Id))
+        {
+            return;
+        }
+
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Patch, $"api/Campaign/{campaign.Id}/status")
+            {
+                Content = JsonContent.Create(new UpdateCampaignStatusRequest
+                {
+                    Status = status
+                })
+            };
+
+            var response = await Http.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"Status da campanha atualizado para {GetStatusName(status).ToLower()}.", Severity.Success);
+                await LoadCampaignsAsync();
+                StateHasChanged();
+                return;
+            }
+
+            var message = await ReadErrorMessageAsync(response, "Não foi possível atualizar o status da campanha.");
+            Snackbar.Add(message, Severity.Error);
+        }
+        catch
+        {
+            Snackbar.Add("Não foi possível se conectar ao servidor no momento.", Severity.Error);
+        }
+        finally
+        {
+            _campaignsUpdatingStatus.Remove(campaign.Id);
+        }
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (PendingDeleteCampaign is null)
+        {
+            return;
+        }
+
+        await DeleteCampaignAsync(PendingDeleteCampaign);
+    }
+
+    private async Task DeleteCampaignAsync(CampaignSummaryModel campaign)
+    {
+        if (!Session.IsAdmin || !_campaignsDeleting.Add(campaign.Id))
+        {
+            return;
+        }
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/Campaign/{campaign.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                _pendingDeleteCampaignId = null;
+                Snackbar.Add("Campanha excluída com sucesso.", Severity.Success);
+                await LoadCampaignsAsync();
+                StateHasChanged();
+                return;
+            }
+
+            var message = await ReadErrorMessageAsync(response, "Não foi possível excluir a campanha.");
+            Snackbar.Add(message, Severity.Error);
+        }
+        catch
+        {
+            Snackbar.Add("Não foi possível se conectar ao servidor no momento.", Severity.Error);
+        }
+        finally
+        {
+            _campaignsDeleting.Remove(campaign.Id);
+        }
+    }
+
+    private static async Task<string> ReadErrorMessageAsync(HttpResponseMessage response, string fallbackMessage)
+    {
+        try
+        {
+            var failure = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            return string.IsNullOrWhiteSpace(failure?.Message) ? fallbackMessage : failure.Message;
+        }
+        catch
+        {
+            return fallbackMessage;
+        }
+    }
+
+    private static int GetCurrentStatusValue(string? status)
+        => (status ?? string.Empty).Trim().ToUpperInvariant() switch
+        {
+            "PAUSED" => 2,
+            "CLOSED" => 3,
+            _ => 1
+        };
+
+    private static string GetStatusName(int status)
+        => status switch
+        {
+            2 => "Pausada",
+            3 => "Encerrada",
+            _ => "Ativa"
+        };
+
     public void Dispose()
     {
         Session.Changed -= HandleSessionChanged;
+    }
+
+    private sealed class UpdateCampaignStatusRequest
+    {
+        public int Status { get; set; }
+    }
+
+    private sealed class ErrorResponse
+    {
+        public string Message { get; set; } = string.Empty;
     }
 }

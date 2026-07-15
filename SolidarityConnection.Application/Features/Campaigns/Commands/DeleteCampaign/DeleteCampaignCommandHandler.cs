@@ -18,6 +18,11 @@ public sealed class DeleteCampaignCommandHandler(
             return ResultData<bool>.Error("Campanha não encontrada.");
         }
 
+        if (campaign.AmountRaised > 0)
+        {
+            return ResultData<bool>.Error("Não é possível excluir a campanha porque já existe valor doado.");
+        }
+
         await campaignRepository.DeleteAsync(campaign, cancellationToken);
 
         return ResultData<bool>.Success(true);

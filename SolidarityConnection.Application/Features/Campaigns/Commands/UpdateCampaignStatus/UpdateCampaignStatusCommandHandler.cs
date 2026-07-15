@@ -23,6 +23,10 @@ public sealed class UpdateCampaignStatusCommandHandler(
 
         switch (command.Status)
         {
+            case CampaignStatus.Active:
+                campaign.ActivateCampaign();
+                break;
+
             case CampaignStatus.Paused:
                 campaign.PauseCampaign();
                 break;
@@ -32,7 +36,7 @@ public sealed class UpdateCampaignStatusCommandHandler(
                 break;
 
             default:
-                return ResultData<CampaignOutput>.Error("A atualização de status da campanha aceita apenas Pausada ou Encerrada.");
+                return ResultData<CampaignOutput>.Error("O status informado para a campanha é inválido.");
         }
 
         await campaignRepository.UpdateAsync(campaign, cancellationToken);
