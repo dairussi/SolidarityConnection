@@ -71,6 +71,10 @@
 
             @if (Session.IsAdmin)
             {
+                <NavLink href="/usuarios" class="side-menu-link" @onclick="CloseSideMenuFromNavAsync">
+                    Usuários
+                </NavLink>
+
                 <NavLink href="/campanhas/nova" class="side-menu-link" @onclick="CloseSideMenuFromNavAsync">
                     Campanha
                 </NavLink>
