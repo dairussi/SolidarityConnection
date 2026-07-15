@@ -22,10 +22,18 @@ public sealed class CreateCampaignFormModel : IValidatableObject
         {
             yield return new ValidationResult("O título da campanha é obrigatório.", [nameof(Title)]);
         }
+        else if (Title.Trim().Length > 200)
+        {
+            yield return new ValidationResult("O título da campanha deve ter no máximo 200 caracteres.", [nameof(Title)]);
+        }
 
         if (string.IsNullOrWhiteSpace(Description))
         {
             yield return new ValidationResult("A descrição da campanha é obrigatória.", [nameof(Description)]);
+        }
+        else if (Description.Trim().Length > 2000)
+        {
+            yield return new ValidationResult("A descrição da campanha deve ter no máximo 2000 caracteres.", [nameof(Description)]);
         }
 
         if (!StartDate.HasValue)

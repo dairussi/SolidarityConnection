@@ -11,9 +11,6 @@
     <section class="create-campaign-panel">
         <div class="create-campaign-copy">
             <MudText Typo="Typo.h4" Class="create-campaign-heading">Criar nova campanha</MudText>
-            <MudText Typo="Typo.body1" Class="create-campaign-description">
-                Preencha os dados da campanha.
-            </MudText>
         </div>
 
         <EditForm Model="@_model" OnValidSubmit="HandleSubmitAsync" class="create-campaign-form" autocomplete="off">
@@ -30,33 +27,56 @@
                 <MudTextField T="string"
                               Label="Título da campanha"
                               Placeholder="Digite um título claro para a campanha"
+                              HelperText="Máximo de 200 caracteres"
                               Variant="Variant.Outlined"
                               FullWidth="true"
                               Immediate="true"
+                              MaxLength="200"
+                              Counter="200"
                               For="@(() => _model.Title)"
                               @bind-Value="_model.Title" />
 
                 <MudTextField T="string"
                               Label="Descrição"
                               Placeholder="Explique o objetivo da campanha e como as doações serão utilizadas"
+                              HelperText="Máximo de 2000 caracteres"
                               Variant="Variant.Outlined"
                               FullWidth="true"
                               Immediate="true"
-                              Lines="4"
-                              MaxLines="6"
+                              Lines="3"
+                              MaxLines="4"
+                              MaxLength="2000"
+                              Counter="2000"
                               For="@(() => _model.Description)"
                               @bind-Value="_model.Description" />
 
-                <MudSelect T="int"
-                           Label="Status inicial"
-                           Variant="Variant.Outlined"
-                           FullWidth="true"
-                           For="@(() => _model.Status)"
-                           @bind-Value="_model.Status">
-                    <MudSelectItem Value="1">Ativa</MudSelectItem>
-                    <MudSelectItem Value="2">Pausada</MudSelectItem>
-                    <MudSelectItem Value="3">Encerrada</MudSelectItem>
-                </MudSelect>
+                <div class="create-campaign-grid">
+                    <MudSelect T="int"
+                               Label="Status inicial"
+                               Variant="Variant.Outlined"
+                               FullWidth="true"
+                               For="@(() => _model.Status)"
+                               @bind-Value="_model.Status">
+                        <MudSelectItem Value="1">Ativa</MudSelectItem>
+                        <MudSelectItem Value="2">Pausada</MudSelectItem>
+                        <MudSelectItem Value="3">Encerrada</MudSelectItem>
+                    </MudSelect>
+
+                    <MudNumericField T="decimal?"
+                                     Label="Meta de arrecadação"
+                                     Placeholder="0,00"
+                                     Variant="Variant.Outlined"
+                                     FullWidth="true"
+                                     Immediate="true"
+                                     HideSpinButtons="true"
+                                     Min="0.01m"
+                                     Step="100"
+                                     Culture="@BrazilianCulture"
+                                     Adornment="Adornment.Start"
+                                     AdornmentText="R$"
+                                     For="@(() => _model.TargetAmount)"
+                                     @bind-Value="_model.TargetAmount" />
+                </div>
 
                 <div class="create-campaign-grid">
                     <MudDatePicker Label="Data de início"
@@ -77,21 +97,6 @@
                                    DateChanged="HandleEndDateChanged"
                                    For="@(() => _model.EndDate)" />
                 </div>
-
-                <MudNumericField T="decimal?"
-                                 Label="Meta de arrecadação"
-                                 Placeholder="0,00"
-                                 Variant="Variant.Outlined"
-                                 FullWidth="true"
-                                 Immediate="true"
-                                 HideSpinButtons="true"
-                                 Min="0.01m"
-                                 Step="100"
-                                 Culture="@BrazilianCulture"
-                                 Adornment="Adornment.Start"
-                                 AdornmentText="R$"
-                                 For="@(() => _model.TargetAmount)"
-                                 @bind-Value="_model.TargetAmount" />
 
                 <MudButton ButtonType="ButtonType.Submit"
                            Color="Color.Primary"
@@ -121,7 +126,7 @@
 
 <style>
     .create-campaign-shell {
-        min-height: 100vh;
+        min-height: 100%;
         width: 100%;
         display: flex;
         padding: 0;
@@ -131,12 +136,12 @@
 
     .create-campaign-panel {
         width: 100%;
-        min-height: 100vh;
+        min-height: 100%;
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        gap: 24px;
-        padding: 32px;
+        justify-content: normal;
+        gap: 1rem;
+        padding: 20px 30px 0;
         box-sizing: border-box;
         background: #fff;
     }
@@ -170,6 +175,7 @@
     }
 
     .create-campaign-heading {
+        margin: 0;
         font-weight: 700;
     }
 
@@ -184,6 +190,10 @@
 
     :deep(.mud-input-outlined) {
         border-radius: 1rem;
+    }
+
+    :deep(.mud-input-helper-text) {
+        margin-inline: 0.25rem;
     }
 
     :deep(.mud-button-root) {
@@ -203,7 +213,7 @@
     @@media (max-width: 768px) {
         .create-campaign-panel {
             min-height: auto;
-            padding: 32px 24px;
+            padding: 12px 24px 0;
         }
     }
 </style>
