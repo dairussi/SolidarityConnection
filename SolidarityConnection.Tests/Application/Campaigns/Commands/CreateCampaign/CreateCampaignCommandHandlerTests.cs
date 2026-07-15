@@ -3,6 +3,7 @@ using FluentAssertions;
 using Moq;
 using SolidarityConnection.Application.Common.Interfaces;
 using SolidarityConnection.Application.Features.Campaigns.Commands.CreateCampaign;
+using SolidarityConnection.Domain.Campaign.Enums;
 using SolidarityConnection.Domain.Campaign.Models;
 
 namespace SolidarityConnection.Tests.Application.Campaigns.Commands.CreateCampaign;
@@ -29,6 +30,7 @@ public class CreateCampaignCommandHandlerTests
             StartDate: DateTime.UtcNow.Date.AddDays(1),
             EndDate: DateTime.UtcNow.Date.AddDays(20),
             TargetAmount: _faker.Random.Decimal(100, 5000),
+            Status: CampaignStatus.Active,
             ManagerId: _faker.Random.Int(1, 50));
 
         _campaignRepositoryMock

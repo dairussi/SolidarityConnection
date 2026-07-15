@@ -25,25 +25,32 @@ public sealed class DonationRepository(AppDbContext context) : IDonationReposito
         int donorId,
         CancellationToken cancellationToken)
     {
-        return await context.Donations
+        var paidTotalsByCampaign = context.Donations
             .AsNoTracking()
-            .Where(donation => donation.DonorId == donorId)
+            .Where(donation => donation.DonorId == donorId && donation.Status == DonationStatus.Paid)
+            .GroupBy(donation => donation.CampaignId)
+            .Select(group => new
+            {
+                CampaignId = group.Key,
+                TotalDonated = group.Sum(item => item.Amount)
+            });
+
+        return await paidTotalsByCampaign
             .Join(
                 context.Campaigns.AsNoTracking(),
-                donation => donation.CampaignId,
+                total => total.CampaignId,
                 campaign => campaign.Id,
-                (donation, campaign) => new
+                (total, campaign) => new
                 {
-                    donation.CampaignId,
+                    total.CampaignId,
                     campaign.Title,
-                    donation.Amount
+                    total.TotalDonated
                 })
-            .GroupBy(item => new { item.CampaignId, item.Title })
-            .Select(group => new DonationTotalByCampaignOutput(
-                group.Key.CampaignId,
-                group.Key.Title,
-                group.Sum(item => item.Amount)))
-            .OrderBy(item => item.CampaignTitle)
+            .OrderBy(item => item.Title)
+            .Select(item => new DonationTotalByCampaignOutput(
+                item.CampaignId,
+                item.Title,
+                item.TotalDonated))
             .ToListAsync(cancellationToken);
     }
 

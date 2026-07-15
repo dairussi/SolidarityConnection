@@ -1,0 +1,708 @@
+@page "/doacoes"
+@using System.Globalization
+@using System.Net
+@using SolidarityConnection.Frontend.Models.Donations
+@inject HttpClient Http
+@inject AppSessionService Session
+@inject NavigationManager Navigation
+
+<PageTitle>Conexão Solidária | Minhas doações</PageTitle>
+
+<div class="donations-shell">
+    <div class="donations-stage">
+        @if (_isLoading)
+        {
+            <section class="donations-loading-state" aria-label="Carregando histórico de doações">
+                <div class="donations-loading-hero"></div>
+
+                <div class="donations-loading-stats">
+                    @for (var index = 0; index < 3; index++)
+                    {
+                        <div class="donations-loading-stat"></div>
+                    }
+                </div>
+
+                <div class="donations-loading-list">
+                    @for (var index = 0; index < 3; index++)
+                    {
+                        <div class="donations-loading-card"></div>
+                    }
+                </div>
+            </section>
+        }
+        else if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                @_errorMessage
+            </MudAlert>
+        }
+        else if (_campaignTotals.Count == 0)
+        {
+            <MudPaper Class="donations-empty-state" Elevation="0">
+                <div class="donations-empty-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.VolunteerActivism" Size="Size.Large" />
+                </div>
+
+                <MudText Typo="Typo.h5" HtmlTag="h1" Class="donations-empty-title">
+                    Sua jornada solidária está pronta para começar.
+                </MudText>
+
+                <MudText Typo="Typo.body1" Class="donations-empty-description">
+                    Quando você fizer sua primeira doação, esta área vai celebrar seu impacto e mostrar quanto cada campanha já recebeu do seu apoio.
+                </MudText>
+
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Campaign"
+                           OnClick="NavigateToCampaigns">
+                    Ver campanhas para apoiar
+                </MudButton>
+            </MudPaper>
+        }
+        else
+        {
+            <section class="donations-hero">
+                <MudPaper Class="donations-hero-card" Elevation="0">
+                    <div class="donations-hero-content">
+                        <div class="donations-hero-copy">
+                            <MudChip T="string" Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Small">
+                                Seu impacto solidário
+                            </MudChip>
+
+                            <MudText Typo="Typo.h4" HtmlTag="h1" Class="donations-hero-title">
+                                Você já transformou generosidade em apoio real.
+                            </MudText>
+
+                            <MudText Typo="Typo.body1" Class="donations-hero-description">
+                                @HeroMessage
+                            </MudText>
+                        </div>
+
+                        <div class="donations-hero-highlight">
+                            <span class="donations-hero-label">Montante total doado</span>
+                            <strong class="donations-hero-amount">@FormatCurrency(TotalDonated)</strong>
+                            <span class="donations-hero-subtitle">@CampaignCountLabel</span>
+                        </div>
+                    </div>
+                </MudPaper>
+            </section>
+
+            <section class="donations-summary-grid" aria-label="Resumo das doações">
+                <MudPaper Class="donations-summary-card" Elevation="0">
+                    <div class="donations-summary-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.Favorite" Size="Size.Medium" />
+                    </div>
+
+                    <div class="donations-summary-copy">
+                        <span class="donations-summary-label">Campanhas apoiadas</span>
+                        <strong class="donations-summary-value">@CampaignCount</strong>
+                        <span class="donations-summary-detail">Cada contribuição fortalece uma causa diferente.</span>
+                    </div>
+                </MudPaper>
+
+                <MudPaper Class="donations-summary-card" Elevation="0">
+                    <div class="donations-summary-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Size="Size.Medium" />
+                    </div>
+
+                    <div class="donations-summary-copy">
+                        <span class="donations-summary-label">Maior apoio em uma campanha</span>
+                        <strong class="donations-summary-value">@FormatCurrency(TopCampaign?.TotalDonated ?? 0m)</strong>
+                        <span class="donations-summary-detail">@TopCampaignLabel</span>
+                    </div>
+                </MudPaper>
+
+                <MudPaper Class="donations-summary-card" Elevation="0">
+                    <div class="donations-summary-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.Paid" Size="Size.Medium" />
+                    </div>
+
+                    <div class="donations-summary-copy">
+                        <span class="donations-summary-label">Média por campanha</span>
+                        <strong class="donations-summary-value">@FormatCurrency(AverageDonationPerCampaign)</strong>
+                        <span class="donations-summary-detail">Seu apoio está distribuído com consistência.</span>
+                    </div>
+                </MudPaper>
+            </section>
+
+            <section class="donations-list-section">
+                <div class="donations-list-header">
+                    <div class="donations-list-copy">
+                        <MudText Typo="Typo.h5" HtmlTag="h2" Class="donations-list-title">
+                            Campanhas que já receberam seu apoio
+                        </MudText>
+
+                        <MudText Typo="Typo.body2" Class="donations-list-description">
+                            Veja quanto cada campanha já recebeu do seu histórico de doações.
+                        </MudText>
+                    </div>
+
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.AddCircleOutline"
+                               OnClick="NavigateToCampaigns">
+                        Apoiar mais campanhas
+                    </MudButton>
+                </div>
+
+                <div class="donations-campaign-grid">
+                    @foreach (var campaign in _campaignTotals)
+                    {
+                        <MudPaper Class="donations-campaign-card" Elevation="0">
+                            <div class="donations-campaign-top">
+                                <div class="donations-campaign-copy">
+                                    <MudText Typo="Typo.h6" HtmlTag="h3" Class="donations-campaign-title">
+                                        @campaign.CampaignTitle
+                                    </MudText>
+
+                                    <MudText Typo="Typo.body2" Class="donations-campaign-description">
+                                        @GetCampaignMessage(campaign)
+                                    </MudText>
+                                </div>
+
+                                <div class="donations-campaign-share">
+                                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" />
+                                    <span>@GetContributionShare(campaign).ToString("F0", BrazilianCulture)% do seu total</span>
+                                </div>
+                            </div>
+
+                            <div class="donations-campaign-progress">
+                                <span class="donations-campaign-progress-label">Participação no seu impacto</span>
+
+                                <div class="donations-campaign-progress-bar" aria-hidden="true">
+                                    <span class="donations-campaign-progress-fill"
+                                          style="@($"width: {GetContributionShare(campaign).ToString("F0", CultureInfo.InvariantCulture)}%;")"></span>
+                                </div>
+                            </div>
+
+                            <div class="donations-campaign-metrics">
+                                <div class="donations-campaign-metric">
+                                    <span>Total doado nessa campanha</span>
+                                    <strong>@FormatCurrency(campaign.TotalDonated)</strong>
+                                </div>
+
+                                <div class="donations-campaign-metric">
+                                    <span>Posição no seu ranking</span>
+                                    <strong>#@GetCampaignRank(campaign)</strong>
+                                </div>
+                            </div>
+                        </MudPaper>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+</div>
+
+<style>
+    .donations-shell {
+        flex: 1 1 auto;
+        min-height: 100%;
+        width: 100%;
+        display: flex;
+        padding: 0;
+        margin: 0;
+        background:
+            radial-gradient(circle at top right, rgba(196, 181, 253, 0.24), transparent 28%),
+            linear-gradient(180deg, #fcfbff 0%, #ffffff 32%, #faf5ff 100%);
+    }
+
+    .donations-stage {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 2.5rem 3rem 3rem;
+        box-sizing: border-box;
+    }
+
+    .donations-loading-state,
+    .donations-loading-list,
+    .donations-campaign-grid {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .donations-loading-hero,
+    .donations-loading-stat,
+    .donations-loading-card {
+        border-radius: 1.5rem;
+        border: 1px solid #ede9fe;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.72) 25%, rgba(237, 233, 254, 0.92) 50%, rgba(255, 255, 255, 0.72) 75%);
+        background-size: 400% 100%;
+        animation: donations-shimmer 1.5s infinite linear;
+    }
+
+    .donations-loading-hero {
+        min-height: 16rem;
+    }
+
+    .donations-loading-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .donations-loading-stat {
+        min-height: 9rem;
+    }
+
+    .donations-loading-card {
+        min-height: 13.5rem;
+    }
+
+    .donations-empty-state,
+    .donations-hero-card,
+    .donations-summary-card,
+    .donations-campaign-card {
+        border-radius: 1.5rem;
+        border: 1px solid #ede9fe;
+        box-shadow: none;
+    }
+
+    .donations-empty-state {
+        max-width: 44rem;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 2rem;
+        background: #fff;
+    }
+
+    .donations-empty-icon,
+    .donations-summary-icon {
+        width: 3.5rem;
+        height: 3.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 1rem;
+        background: #f3e8ff;
+        color: #7c3aed;
+    }
+
+    .donations-empty-title {
+        color: #111827;
+        font-weight: 700;
+    }
+
+    .donations-empty-description {
+        color: #6b7280;
+        max-width: 36rem;
+    }
+
+    .donations-hero-card {
+        overflow: hidden;
+        padding: 0;
+        background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 44%, #8b5cf6 100%);
+        color: #fff;
+    }
+
+    .donations-hero-content {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+        gap: 1.5rem;
+        align-items: stretch;
+        padding: 2rem;
+    }
+
+    .donations-hero-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .donations-hero-title {
+        color: #fff;
+        font-weight: 700;
+        max-width: 34rem;
+    }
+
+    .donations-hero-description {
+        color: rgba(255, 255, 255, 0.84);
+        max-width: 38rem;
+        line-height: 1.7;
+    }
+
+    .donations-hero-highlight {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1.5rem;
+        border-radius: 1.25rem;
+        background: rgba(255, 255, 255, 0.14);
+        backdrop-filter: blur(10px);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    }
+
+    .donations-hero-label,
+    .donations-hero-subtitle {
+        color: rgba(255, 255, 255, 0.78);
+        font-weight: 700;
+    }
+
+    .donations-hero-label {
+        font-size: 0.84rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .donations-hero-amount {
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 1;
+    }
+
+    .donations-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .donations-summary-card {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+        padding: 1.4rem;
+        background: #fff;
+    }
+
+    .donations-summary-copy,
+    .donations-list-copy,
+    .donations-campaign-copy {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .donations-summary-copy {
+        gap: 0.45rem;
+        min-width: 0;
+    }
+
+    .donations-summary-label,
+    .donations-summary-detail,
+    .donations-list-description,
+    .donations-campaign-description,
+    .donations-campaign-progress-label,
+    .donations-campaign-metric span {
+        color: #6b7280;
+    }
+
+    .donations-summary-label,
+    .donations-campaign-progress-label,
+    .donations-campaign-metric span {
+        font-size: 0.84rem;
+        font-weight: 700;
+    }
+
+    .donations-summary-value {
+        color: #111827;
+        font-size: 1.5rem;
+        line-height: 1.15;
+    }
+
+    .donations-list-section {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .donations-list-header,
+    .donations-campaign-top,
+    .donations-campaign-metrics {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .donations-list-title,
+    .donations-campaign-title {
+        color: #111827;
+        font-weight: 700;
+    }
+
+    .donations-campaign-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .donations-campaign-card {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1.4rem;
+        background: rgba(255, 255, 255, 0.96);
+    }
+
+    .donations-campaign-copy {
+        gap: 0.4rem;
+        min-width: 0;
+    }
+
+    .donations-campaign-share {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.55rem 0.85rem;
+        border-radius: 999px;
+        background: #faf5ff;
+        color: #6d28d9;
+        font-size: 0.85rem;
+        font-weight: 800;
+        white-space: nowrap;
+        box-shadow: inset 0 0 0 1px #e9d5ff;
+    }
+
+    .donations-campaign-progress {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+
+    .donations-campaign-progress-bar {
+        width: 100%;
+        height: 0.85rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #ede9fe;
+    }
+
+    .donations-campaign-progress-fill {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #7c3aed 0%, #c084fc 100%);
+    }
+
+    .donations-campaign-metrics {
+        align-items: stretch;
+    }
+
+    .donations-campaign-metric {
+        flex: 1 1 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        padding: 0.9rem 1rem;
+        border-radius: 1rem;
+        background: #fcfbff;
+        box-shadow: inset 0 0 0 1px #f3e8ff;
+    }
+
+    .donations-campaign-metric strong {
+        color: #111827;
+        font-size: 1.05rem;
+    }
+
+    @@keyframes donations-shimmer {
+        0% {
+            background-position: 100% 0;
+        }
+
+        100% {
+            background-position: -100% 0;
+        }
+    }
+
+    @@media (max-width: 1100px) {
+        .donations-stage {
+            padding: 2rem 1.5rem 2.5rem;
+        }
+
+        .donations-hero-content,
+        .donations-summary-grid,
+        .donations-campaign-grid,
+        .donations-loading-stats {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 760px) {
+        .donations-list-header,
+        .donations-campaign-top,
+        .donations-campaign-metrics {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .donations-list-header .mud-button-root,
+        .donations-empty-state .mud-button-root {
+            width: 100%;
+        }
+
+        .donations-campaign-share {
+            white-space: normal;
+        }
+    }
+
+    @@media (max-width: 640px) {
+        .donations-stage {
+            padding: 1.5rem 1rem 2rem;
+        }
+
+        .donations-hero-content,
+        .donations-empty-state,
+        .donations-summary-card,
+        .donations-campaign-card {
+            padding: 1.2rem;
+        }
+
+        .donations-hero-highlight {
+            padding: 1.1rem;
+        }
+    }
+</style>
+
+@code {
+    private static readonly CultureInfo BrazilianCulture = CultureInfo.GetCultureInfo("pt-BR");
+
+    private readonly List<DonationTotalByCampaignModel> _campaignTotals = [];
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    private decimal TotalDonated => _campaignTotals.Sum(item => item.TotalDonated);
+
+    private int CampaignCount => _campaignTotals.Count;
+
+    private decimal AverageDonationPerCampaign
+        => CampaignCount == 0 ? 0m : decimal.Round(TotalDonated / CampaignCount, 2);
+
+    private DonationTotalByCampaignModel? TopCampaign => _campaignTotals.FirstOrDefault();
+
+    private string CampaignCountLabel
+        => CampaignCount == 1
+            ? "em 1 campanha apoiada"
+            : $"em {CampaignCount} campanhas apoiadas";
+
+    private string TopCampaignLabel
+        => TopCampaign is null
+            ? "Sua próxima doação pode estrear este destaque."
+            : TopCampaign.CampaignTitle;
+
+    private string HeroMessage
+    {
+        get
+        {
+            if (TotalDonated >= 1000m)
+            {
+                return "Seu histórico já mostra um apoio muito consistente. Cada valor enviado fortalece campanhas reais e ajuda a manter a corrente solidária em movimento.";
+            }
+
+            if (TotalDonated >= 300m)
+            {
+                return "Você já construiu um impacto bonito por aqui. Esse cuidado contínuo inspira novas contribuições e ajuda mais campanhas a seguirem vivas.";
+            }
+
+            return "Toda contribuição conta, e a sua já começou a deixar marcas concretas nas campanhas que você escolheu apoiar.";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureInitializedAsync();
+
+        if (!Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login", replace: true);
+            return;
+        }
+
+        await LoadDonationTotalsAsync();
+    }
+
+    private async Task LoadDonationTotalsAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var response = await Http.GetAsync("api/Donation/MyTotalsByCampaign");
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                await Session.SignOutAsync();
+                Navigation.NavigateTo("/login", replace: true);
+                return;
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<List<DonationTotalByCampaignModel>>();
+
+                _campaignTotals.Clear();
+
+                if (result is not null)
+                {
+                    _campaignTotals.AddRange(result.OrderByDescending(item => item.TotalDonated).ThenBy(item => item.CampaignTitle));
+                }
+
+                return;
+            }
+
+            var failure = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
+            _errorMessage = failure?.Message ?? "Não foi possível carregar seu histórico de doações agora.";
+        }
+        catch
+        {
+            _errorMessage = "Não foi possível se conectar ao servidor no momento.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void NavigateToCampaigns()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private decimal GetContributionShare(DonationTotalByCampaignModel campaign)
+    {
+        if (TotalDonated <= 0m)
+        {
+            return 0m;
+        }
+
+        return Math.Round(campaign.TotalDonated / TotalDonated * 100m, 0);
+    }
+
+    private int GetCampaignRank(DonationTotalByCampaignModel campaign)
+    {
+        return _campaignTotals.FindIndex(item => item.CampaignId == campaign.CampaignId) + 1;
+    }
+
+    private string GetCampaignMessage(DonationTotalByCampaignModel campaign)
+    {
+        var share = GetContributionShare(campaign);
+
+        if (TopCampaign?.CampaignId == campaign.CampaignId)
+        {
+            return "Esta é a campanha que mais recebeu seu apoio até agora. Um destaque bonito na sua jornada solidária.";
+        }
+
+        if (share >= 30m)
+        {
+            return "Uma causa que ocupa um espaço importante no seu histórico de doações.";
+        }
+
+        if (share >= 15m)
+        {
+            return "Seu apoio aqui já representa uma participação relevante dentro do seu impacto total.";
+        }
+
+        return "Mais uma campanha que já contou com a sua generosidade para seguir em frente.";
+    }
+
+    private static string FormatCurrency(decimal value)
+    {
+        return value.ToString("C", BrazilianCulture);
+    }
+
+    private sealed class ApiErrorResponse
+    {
+        public string Message { get; set; } = string.Empty;
+    }
+}
