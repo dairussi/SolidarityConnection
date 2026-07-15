@@ -13,7 +13,7 @@
                 <MudText Typo="Typo.overline" Class="register-kicker">Conexão Solidária</MudText>
                 <MudText Typo="Typo.h4" Class="register-heading">Crie sua conta</MudText>
                 <MudText Typo="Typo.body1" Class="register-description">
-                    Cadastre-se para acompanhar campanhas, registrar doações e participar da rede de apoio com segurança.
+                    Cadastre-se para participar da rede de apoio com segurança.
                 </MudText>
             </div>
 
@@ -66,6 +66,7 @@
                                   FullWidth="true"
                                   Immediate="true"
                                   For="@(() => _model.Password)"
+                                  autocomplete="new-password"
                                   @bind-Value="_model.Password" />
 
                     <MudButton ButtonType="ButtonType.Submit"
@@ -143,7 +144,7 @@
     }
 
     .register-form {
-        width: min(100%, 24rem);
+        width: min(100%, 43rem);
     }
 
     .register-kicker,
