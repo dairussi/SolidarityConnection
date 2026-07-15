@@ -1,23 +1,221 @@
 @page "/campanhas/nova"
+@using System.Globalization
+@inject HttpClient Http
+@inject ISnackbar Snackbar
 @inject AppSessionService Session
 @inject NavigationManager Navigation
 
 <PageTitle>Conexão Solidária | Nova campanha</PageTitle>
 
-<div class="placeholder-shell">
-    <MudPaper Class="placeholder-card" Elevation="0">
-        <MudText Typo="Typo.overline" Class="placeholder-kicker">Área do gestor</MudText>
-        <MudText Typo="Typo.h4" HtmlTag="h1" Class="placeholder-title">Cadastro de campanha</MudText>
-        <MudText Typo="Typo.body1" Class="placeholder-copy">
-            Este acesso já ficou amarrado no menu do admin. Na próxima etapa, montamos o formulário de criação aqui.
-        </MudText>
-        <MudButton Href="/" Color="Color.Primary" Variant="Variant.Filled">
-            Voltar para campanhas
-        </MudButton>
-    </MudPaper>
+<div class="create-campaign-shell">
+    <section class="create-campaign-panel">
+        <div class="create-campaign-copy">
+            <MudText Typo="Typo.h4" Class="create-campaign-heading">Criar nova campanha</MudText>
+            <MudText Typo="Typo.body1" Class="create-campaign-description">
+                Preencha os dados da campanha.
+            </MudText>
+        </div>
+
+        <EditForm Model="@_model" OnValidSubmit="HandleSubmitAsync" class="create-campaign-form" autocomplete="off">
+            <DataAnnotationsValidator />
+
+            <MudStack Spacing="3">
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                        @_errorMessage
+                    </MudAlert>
+                }
+
+                <MudTextField T="string"
+                              Label="Título da campanha"
+                              Placeholder="Digite um título claro para a campanha"
+                              Variant="Variant.Outlined"
+                              FullWidth="true"
+                              Immediate="true"
+                              For="@(() => _model.Title)"
+                              @bind-Value="_model.Title" />
+
+                <MudTextField T="string"
+                              Label="Descrição"
+                              Placeholder="Explique o objetivo da campanha e como as doações serão utilizadas"
+                              Variant="Variant.Outlined"
+                              FullWidth="true"
+                              Immediate="true"
+                              Lines="4"
+                              MaxLines="6"
+                              For="@(() => _model.Description)"
+                              @bind-Value="_model.Description" />
+
+                <MudSelect T="int"
+                           Label="Status inicial"
+                           Variant="Variant.Outlined"
+                           FullWidth="true"
+                           For="@(() => _model.Status)"
+                           @bind-Value="_model.Status">
+                    <MudSelectItem Value="1">Ativa</MudSelectItem>
+                    <MudSelectItem Value="2">Pausada</MudSelectItem>
+                    <MudSelectItem Value="3">Encerrada</MudSelectItem>
+                </MudSelect>
+
+                <div class="create-campaign-grid">
+                    <MudDatePicker Label="Data de início"
+                                   Variant="Variant.Outlined"
+                                   DateFormat="dd/MM/yyyy"
+                                   Editable="true"
+                                   Mask="@_dateMask"
+                                   Date="@_model.StartDate"
+                                   DateChanged="HandleStartDateChanged"
+                                   For="@(() => _model.StartDate)" />
+
+                    <MudDatePicker Label="Data de término"
+                                   Variant="Variant.Outlined"
+                                   DateFormat="dd/MM/yyyy"
+                                   Editable="true"
+                                   Mask="@_dateMask"
+                                   Date="@_model.EndDate"
+                                   DateChanged="HandleEndDateChanged"
+                                   For="@(() => _model.EndDate)" />
+                </div>
+
+                <MudNumericField T="decimal?"
+                                 Label="Meta de arrecadação"
+                                 Placeholder="0,00"
+                                 Variant="Variant.Outlined"
+                                 FullWidth="true"
+                                 Immediate="true"
+                                 HideSpinButtons="true"
+                                 Min="0.01m"
+                                 Step="100"
+                                 Culture="@BrazilianCulture"
+                                 Adornment="Adornment.Start"
+                                 AdornmentText="R$"
+                                 For="@(() => _model.TargetAmount)"
+                                 @bind-Value="_model.TargetAmount" />
+
+                <MudButton ButtonType="ButtonType.Submit"
+                           Color="Color.Primary"
+                           Variant="Variant.Filled"
+                           Size="Size.Large"
+                           FullWidth="true"
+                           Disabled="@_isSubmitting">
+                    @if (_isSubmitting)
+                    {
+                        <MudProgressCircular Class="me-2"
+                                             Color="Color.Inherit"
+                                             Size="Size.Small"
+                                             Indeterminate="true" />
+                        <span>Criando campanha...</span>
+                    }
+                    else
+                    {
+                        <span>Criar campanha</span>
+                    }
+                </MudButton>
+            </MudStack>
+        </EditForm>
+
+        <NavLink href="/" class="create-campaign-link">Voltar para campanhas</NavLink>
+    </section>
 </div>
 
+<style>
+    .create-campaign-shell {
+        min-height: 100vh;
+        width: 100%;
+        display: flex;
+        padding: 0;
+        margin: 0;
+        background: #fff;
+    }
+
+    .create-campaign-panel {
+        width: 100%;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 24px;
+        padding: 32px;
+        box-sizing: border-box;
+        background: #fff;
+    }
+
+    .create-campaign-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .create-campaign-form {
+        width: min(100%, 43rem);
+    }
+
+    .create-campaign-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .create-campaign-kicker,
+    .create-campaign-link {
+        color: #6d28d9;
+        letter-spacing: 0.08em;
+        font-size: 18px;
+    }
+
+    .create-campaign-link {
+        text-decoration: none;
+        width: fit-content;
+    }
+
+    .create-campaign-heading {
+        font-weight: 700;
+    }
+
+    .create-campaign-description {
+        color: #6b7280;
+        max-width: 560px;
+    }
+
+    :deep(.mud-input-control) {
+        margin-top: 0;
+    }
+
+    :deep(.mud-input-outlined) {
+        border-radius: 1rem;
+    }
+
+    :deep(.mud-button-root) {
+        border-radius: 0.95rem;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+        min-height: 3.25rem;
+        text-transform: none;
+    }
+
+    @@media (max-width: 900px) {
+        .create-campaign-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .create-campaign-panel {
+            min-height: auto;
+            padding: 32px 24px;
+        }
+    }
+</style>
+
 @code {
+    private static readonly CultureInfo BrazilianCulture = CultureInfo.GetCultureInfo("pt-BR");
+    private readonly DateMask _dateMask = new("dd/MM/yyyy");
+
+    private readonly CreateCampaignFormModel _model = new();
+    private string? _errorMessage;
+    private bool _isSubmitting;
+
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureInitializedAsync();
@@ -26,5 +224,76 @@
         {
             Navigation.NavigateTo("/", replace: true);
         }
+    }
+
+    private Task HandleStartDateChanged(DateTime? value)
+    {
+        _model.StartDate = value?.Date;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleEndDateChanged(DateTime? value)
+    {
+        _model.EndDate = value?.Date;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        _errorMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync(
+                "api/Campaign",
+                new CreateCampaignRequest
+                {
+                    Title = _model.Title.Trim(),
+                    Description = _model.Description.Trim(),
+                    StartDate = _model.StartDate!.Value,
+                    EndDate = _model.EndDate!.Value,
+                    TargetAmount = _model.TargetAmount!.Value,
+                    Status = _model.Status
+                });
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Campanha criada com sucesso.", Severity.Success);
+                Navigation.NavigateTo("/", replace: true);
+                return;
+            }
+
+            var failure = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            _errorMessage = failure?.Message ?? "Não foi possível criar a campanha com os dados informados.";
+        }
+        catch
+        {
+            _errorMessage = "Não foi possível se conectar ao servidor no momento.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private sealed class CreateCampaignRequest
+    {
+        public string Title { get; set; } = string.Empty;
+
+        public string Description { get; set; } = string.Empty;
+
+        public DateTime StartDate { get; set; }
+
+        public DateTime EndDate { get; set; }
+
+        public decimal TargetAmount { get; set; }
+
+        public int Status { get; set; }
+    }
+
+    private sealed class ErrorResponse
+    {
+        public string Message { get; set; } = string.Empty;
     }
 }
