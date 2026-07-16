@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Portal da Transparência — Conexão Solidária</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; background:#0f172a; color:#e2e8f0; padding:24px; }
+  h1 { font-size:1.4rem; }
+  .kpis { display:flex; gap:16px; margin:20px 0; }
+  .kpi { background:#1e293b; border-radius:8px; padding:16px 24px; flex:1; }
+  .kpi span { display:block; font-size:0.8rem; color:#94a3b8; }
+  .kpi strong { font-size:1.6rem; }
+  canvas { background:#1e293b; border-radius:8px; padding:16px; margin-bottom:24px; }
+  ul { list-style:none; padding:0; }
+  li { background:#1e293b; padding:10px 14px; border-radius:6px; margin-bottom:6px; }
+</style>
+</head>
+<body>
+  <h1>Portal da Transparência — Conexão Solidária</h1>
+  <div class="kpis">
+    <div class="kpi"><span>Total arrecadado</span><strong id="totalRaised">—</strong></div>
+    <div class="kpi"><span>Campanhas ativas</span><strong id="totalCampaigns">—</strong></div>
+    <div class="kpi"><span>Doações confirmadas</span><strong id="totalDonors">—</strong></div>
+  </div>
+  <canvas id="campaignChart" height="90"></canvas>
+  <h2>Últimas doações</h2>
+  <ul id="feed"></ul>
+
+<script>
+let chart;
+
+async function loadData() {
+  const res = await fetch('/api/campaign/transparency-dashboard?page=1&pageSize=20');
+  const data = await res.json();
+  const items = data.items ?? [];
+
+  document.getElementById('totalRaised').textContent =
+    items.reduce((sum, c) => sum + c.amountRaised, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  document.getElementById('totalCampaigns').textContent = items.length;
+  document.getElementById('totalDonors').textContent =
+    items.reduce((sum, c) => sum + c.donorsCount, 0);
+
+  const labels = items.map(c => c.title);
+  const target = items.map(c => c.targetAmount);
+  const raised = items.map(c => c.amountRaised);
+
+  if (!chart) {
+    chart = new Chart(document.getElementById('campaignChart'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Meta', data: target, backgroundColor: '#334155' },
+          { label: 'Arrecadado', data: raised, backgroundColor: '#22c55e' }
+        ]
+      },
+      options: { responsive: true, plugins: { legend: { labels: { color: '#e2e8f0' } } },
+        scales: { x: { ticks: { color: '#e2e8f0' } }, y: { ticks: { color: '#e2e8f0' } } } }
+    });
+  } else {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = target;
+    chart.data.datasets[1].data = raised;
+    chart.update();
+  }
+
+  const allDonations = items.flatMap(c =>
+    (c.lastDonations ?? []).map(d => ({ ...d, campaign: c.title })));
+  allDonations.sort((a, b) => new Date(b.processedAt) - new Date(a.processedAt));
+
+  const feed = document.getElementById('feed');
+  feed.innerHTML = allDonations.slice(0, 10).map(d =>
+    `<li>${d.campaign} — ${d.amount.toLocaleString('pt-BR', { style:'currency', currency:'BRL' })} (${new Date(d.processedAt).toLocaleTimeString('pt-BR')})</li>`
+  ).join('');
+}
+
+loadData();
+setInterval(loadData, 5000);
+</script>
+</body>
+</html>
