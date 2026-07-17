@@ -7,22 +7,21 @@ using SolidarityConnection.Domain.Campaign.Models;
 namespace SolidarityConnection.Application.Features.Campaigns.Commands.CreateCampaign;
 
 public sealed class CreateCampaignCommandHandler(
-    ICampaignRepository campaignRepository) : ICreateCampaignCommandHandler
+    ICampaignRepository campaignRepository,
+    ICampaignTransparencyWriter transparencyWriter) : ICreateCampaignCommandHandler
 {
-
     public async Task<ResultData<CampaignOutput>> Handle(
         CreateCampaignCommand command,
         CancellationToken cancellationToken)
     {
         var campaign = Campaign.Create(
-            command.Title,
-            command.Description,
-            command.StartDate,
-            command.EndDate,
-            command.TargetAmount,
-            command.ManagerId);
+            command.Title, command.Description, command.StartDate,
+            command.EndDate, command.TargetAmount, command.ManagerId);
 
         await campaignRepository.AddAsync(campaign, cancellationToken);
+
+        await transparencyWriter.UpsertCampaignAsync(
+            campaign.Id, campaign.Title, campaign.TargetAmount, campaign.Status.ToString(), cancellationToken);
 
         return ResultData<CampaignOutput>.Success(campaign.ToOutput());
     }
