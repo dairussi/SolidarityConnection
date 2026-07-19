@@ -69,6 +69,8 @@ builder.Services.AddOpenTelemetry()
     });
 
 var app = builder.Build();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseSwagger();
 app.UseSwaggerUI();
 

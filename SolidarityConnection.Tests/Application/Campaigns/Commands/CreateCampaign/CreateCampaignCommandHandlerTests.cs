@@ -12,12 +12,14 @@ public class CreateCampaignCommandHandlerTests
 {
     private readonly Faker _faker = new("pt_BR");
     private readonly Mock<ICampaignRepository> _campaignRepositoryMock;
+    private readonly Mock<ICampaignTransparencyWriter> _transparencyWriterMock;
     private readonly CreateCampaignCommandHandler _handler;
 
     public CreateCampaignCommandHandlerTests()
     {
         _campaignRepositoryMock = new Mock<ICampaignRepository>();
-        _handler = new CreateCampaignCommandHandler(_campaignRepositoryMock.Object);
+        _transparencyWriterMock = new Mock<ICampaignTransparencyWriter>();
+        _handler = new CreateCampaignCommandHandler(_campaignRepositoryMock.Object, _transparencyWriterMock.Object);
     }
 
     [Fact]

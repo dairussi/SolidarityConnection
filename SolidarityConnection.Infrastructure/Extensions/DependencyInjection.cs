@@ -27,8 +27,11 @@ using SolidarityConnection.Infrastructure.Messaging;
 using SolidarityConnection.Infrastructure.Options;
 using SolidarityConnection.Infrastructure.Persistence;
 using SolidarityConnection.Infrastructure.Persistence.Interceptors;
+using SolidarityConnection.Infrastructure.Persistence.Mongo;
 using SolidarityConnection.Infrastructure.Repositories;
 using SolidarityConnection.Infrastructure.Services;
+using SolidarityConnection.Infrastructure.Persistence.Mongo;
+using SolidarityConnection.Application.Features.Campaigns.Queries.GetTransparencyDashboard;
 using System.Text;
 
 namespace SolidarityConnection.Infrastructure.DI;
@@ -85,6 +88,11 @@ public static class DependencyInjection
         services.AddScoped<DonationProcessedConsumer>();
         services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
         services.AddHostedService<RabbitMqDonationProcessedConsumerHostedService>();
+        services.Configure<MongoOptions>(configuration.GetSection("Mongo"));
+        services.AddSingleton<MongoCampaignTransparencyRepository>();
+        services.AddSingleton<ICampaignTransparencyReader>(sp => sp.GetRequiredService<MongoCampaignTransparencyRepository>());
+        services.AddSingleton<ICampaignTransparencyWriter>(sp => sp.GetRequiredService<MongoCampaignTransparencyRepository>());
+        services.AddScoped<IGetTransparencyDashboardQueryHandler, GetTransparencyDashboardQueryHandler>();
         services.AddQuartz(quartz =>
         {
             var jobKey = new JobKey(nameof(PendingDonationReprocessingJob));
@@ -161,6 +169,7 @@ public static class DependencyInjection
                 rabbitConnectionString: $"amqp://{configuration["RabbitMQ:Username"]}:{configuration["RabbitMQ:Password"]}@{configuration["RabbitMQ:Host"]}:{configuration["RabbitMQ:Port"]}/",
                 name: "rabbitmq",
                 tags: new[] { "messaging" });
+
 
         return services;
     }

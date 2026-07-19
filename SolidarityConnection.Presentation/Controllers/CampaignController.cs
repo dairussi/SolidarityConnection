@@ -11,6 +11,8 @@ using SolidarityConnection.Application.Features.Campaigns.Queries.GetActiveCampa
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignById;
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignsPaged;
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignsPaged.Inputs;
+using SolidarityConnection.Application.Features.Campaigns.Queries.GetTransparencyDashboard;
+using SolidarityConnection.Application.Features.Campaigns.Queries.GetTransparencyDashboard.Inputs;
 using SolidarityConnection.Domain.Common.Enums;
 
 namespace SolidarityConnection.Presentation.Controllers;
@@ -24,7 +26,8 @@ public class CampaignController(
     IGetCampaignByIdQueryHandler getCampaignByIdQueryHandler,
     IGetCampaignsPagedQueryHandler getCampaignsPagedQueryHandler,
     IGetActiveCampaignsPagedQueryHandler getActiveCampaignsPagedQueryHandler,
-    IUserContext userContext) : ControllerBase
+    IUserContext userContext,
+    IGetTransparencyDashboardQueryHandler getTransparencyDashboardQueryHandler) : ControllerBase
 {
 
     [Authorize(Roles = nameof(EUserRole.GestorONG))]
@@ -105,13 +108,22 @@ public class CampaignController(
         var result = await deleteCampaignCommandHandler.Handle(new DeleteCampaignCommand(id), cancellationToken);
 
         if (!result.IsSuccess)
-        {
-            var error = new { message = result.ErrorMessage };
-            return result.ErrorMessage == "Campanha não encontrada."
-                ? NotFound(error)
-                : BadRequest(error);
-        }
+            return NotFound(new { message = result.ErrorMessage });
 
         return NoContent();
+    }
+
+    [AllowAnonymous]
+    [HttpGet("transparency-dashboard")]
+    public async Task<IActionResult> GetTransparencyDashboard(
+    [FromQuery] GetTransparencyDashboardInput input,
+    CancellationToken cancellationToken)
+    {
+        var result = await getTransparencyDashboardQueryHandler.Handle(input.MapToQuery(), cancellationToken);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.ErrorMessage });
+
+        return Ok(result.Data);
     }
 }
