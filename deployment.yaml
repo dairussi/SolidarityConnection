@@ -31,6 +31,9 @@ spec:
                 name: solidarity-connection-api-config
             - secretRef:
                 name: solidarity-connection-api-secret
+            - secretRef:
+                name: mongodb-secret
+                optional: true
           resources:
             requests:
               cpu: "100m"

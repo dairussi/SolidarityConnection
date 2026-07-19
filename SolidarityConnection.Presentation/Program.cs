@@ -21,8 +21,7 @@ builder.Services.AddSwaggerGen(c =>
         Title = "API da SolidarityConnection",
         Version = "v1"
     });
-
-    // Autenticação JWT
+    // JWT authentication
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -48,7 +47,7 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-// Métricas de runtime .NET (GC, threads, memória)
+// .NET runtime metrics (GC, threads, memory)
 DotNetRuntimeStatsBuilder.Customize().StartCollecting();
 
 const string serviceName = "SolidarityConnection.API";
@@ -70,17 +69,20 @@ builder.Services.AddOpenTelemetry()
 
 var app = builder.Build();
 app.UseDefaultFiles();
+app.UseDefaultFiles(new DefaultFilesOptions
+{
+    RequestPath = "/transparencia"
+});
+app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
-app.UseBlazorFrameworkFiles();
-app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Middleware do Prometheus — deve vir antes do MapControllers
+// Prometheus middleware must run before MapControllers
 app.UseHttpMetrics();
 
 app.MapControllers();

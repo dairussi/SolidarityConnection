@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SolidarityConnection.Application.Common.Interfaces;
 using SolidarityConnection.Domain.Donation.Enums;
 using SolidarityConnection.Infrastructure.Messaging.Events;
 using SolidarityConnection.Infrastructure.Persistence;
@@ -8,6 +9,7 @@ namespace SolidarityConnection.Infrastructure.Adapters.Events.Consumers;
 
 public sealed class DonationProcessedConsumer(
     AppDbContext context,
+    ICampaignTransparencyWriter transparencyWriter,
     ILogger<DonationProcessedConsumer> logger)
 {
     public async Task ConsumeAsync(
@@ -70,6 +72,15 @@ public sealed class DonationProcessedConsumer(
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        if (!wasPaid && donationStatus == DonationStatus.Paid)
+        {
+            await transparencyWriter.RegisterDonationAsync(
+                donation.CampaignId,
+                donation.Amount,
+                donationProcessedEvent.ProcessedAt,
+                cancellationToken);
+        }
     }
 
     private static DonationStatus ParseStatus(string status)

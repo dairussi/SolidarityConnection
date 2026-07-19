@@ -7,9 +7,9 @@ using SolidarityConnection.Domain.Campaign.Enums;
 namespace SolidarityConnection.Application.Features.Campaigns.Commands.UpdateCampaignStatus;
 
 public sealed class UpdateCampaignStatusCommandHandler(
-    ICampaignRepository campaignRepository) : IUpdateCampaignStatusCommandHandler
+    ICampaignRepository campaignRepository,
+    ICampaignTransparencyWriter transparencyWriter) : IUpdateCampaignStatusCommandHandler
 {
-
     public async Task<ResultData<CampaignOutput>> Handle(
         UpdateCampaignStatusCommand command,
         CancellationToken cancellationToken)
@@ -40,6 +40,10 @@ public sealed class UpdateCampaignStatusCommandHandler(
         }
 
         await campaignRepository.UpdateAsync(campaign, cancellationToken);
+        await transparencyWriter.UpdateStatusAsync(
+            campaign.Id,
+            campaign.Status.ToString(),
+            cancellationToken);
 
         return ResultData<CampaignOutput>.Success(campaign.ToOutput());
     }

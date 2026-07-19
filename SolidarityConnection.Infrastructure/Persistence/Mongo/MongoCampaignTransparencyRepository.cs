@@ -56,6 +56,37 @@ public sealed class MongoCampaignTransparencyRepository : ICampaignTransparencyR
         await _collection.UpdateOneAsync(d => d.CampaignId == campaignId, update, cancellationToken: cancellationToken);
     }
 
+    public async Task SyncCampaignSnapshotAsync(
+        Guid campaignId,
+        string title,
+        decimal targetAmount,
+        string status,
+        decimal amountRaised,
+        int donorsCount,
+        IReadOnlyCollection<RecentDonationDocument> lastDonations,
+        CancellationToken cancellationToken)
+    {
+        var normalizedDonations = lastDonations
+            .OrderByDescending(donation => donation.ProcessedAt)
+            .Take(MaxRecentDonations)
+            .ToList();
+
+        var update = Builders<CampaignTransparencyDocument>.Update
+            .Set(d => d.CampaignId, campaignId)
+            .Set(d => d.Title, title)
+            .Set(d => d.TargetAmount, targetAmount)
+            .Set(d => d.Status, status)
+            .Set(d => d.AmountRaised, amountRaised)
+            .Set(d => d.DonorsCount, donorsCount)
+            .Set(d => d.LastDonations, normalizedDonations);
+
+        await _collection.UpdateOneAsync(
+            d => d.CampaignId == campaignId,
+            update,
+            new UpdateOptions { IsUpsert = true },
+            cancellationToken);
+    }
+
     public async Task<(IReadOnlyList<TransparencyCampaignOutput> Items, int TotalCount)> GetActivePagedAsync(
         int page, int pageSize, CancellationToken cancellationToken)
     {
