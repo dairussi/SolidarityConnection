@@ -1,0 +1,311 @@
+@page "/cadastro"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject AppSessionService Session
+@inject NavigationManager Navigation
+
+<PageTitle>Conexão Solidária | Cadastro</PageTitle>
+
+<div class="register-shell">
+    <div class="register-stage">
+        <section class="register-panel register-panel-left">
+            <div class="register-copy">
+                <MudText Typo="Typo.overline" Class="register-kicker">Conexão Solidária</MudText>
+                <MudText Typo="Typo.h4" Class="register-heading">Crie sua conta</MudText>
+                <MudText Typo="Typo.body1" Class="register-description">
+                    Cadastre-se para participar da rede de apoio com segurança.
+                </MudText>
+            </div>
+
+            <EditForm Model="@_model" OnValidSubmit="HandleSubmitAsync" class="register-form">
+                <DataAnnotationsValidator />
+
+                <MudStack Spacing="3">
+                    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                            @_errorMessage
+                        </MudAlert>
+                    }
+
+                    <MudTextField T="string"
+                                  Label="Nome completo"
+                                  Placeholder="Digite seu nome e sobrenome"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Immediate="true"
+                                  For="@(() => _model.Name)"
+                                  @bind-Value="_model.Name" />
+
+                    <MudTextField T="string"
+                                  Label="E-mail"
+                                  Placeholder="Digite seu e-mail"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Immediate="true"
+                                  For="@(() => _model.Email)"
+                                  @bind-Value="_model.Email" />
+
+                    
+                    <MudTextField T="string"
+                                  Label="CPF"
+                                  Placeholder="000.000.000-00"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Immediate="true"
+                                  For="@(() => _model.Cpf)"
+                                  Mask="@_cpfMask"
+                                  @bind-Value="_model.Cpf" />
+
+                    <MudTextField T="string"
+                                  Label="Senha"
+                                  Placeholder="Crie uma senha forte"
+                                  HelperText="Use ao menos 8 caracteres, 1 letra maiúscula e 1 caractere especial."
+                                  InputType="InputType.Password"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Immediate="true"
+                                  For="@(() => _model.Password)"
+                                  autocomplete="new-password"
+                                  @bind-Value="_model.Password" />
+
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Color="Color.Primary"
+                               Variant="Variant.Filled"
+                               Size="Size.Large"
+                               FullWidth="true"
+                               Disabled="@_isSubmitting">
+                        @if (_isSubmitting)
+                        {
+                            <MudProgressCircular Class="me-2"
+                                                 Color="Color.Inherit"
+                                                 Size="Size.Small"
+                                                 Indeterminate="true" />
+                            <span>Cadastrando...</span>
+                        }
+                        else
+                        {
+                            <span>Criar conta</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </EditForm>
+
+            <NavLink href="/login" class="register-link">Já possui conta? Entrar</NavLink>
+        </section>
+
+        <section class="register-panel register-panel-right" aria-label="Identidade visual da Conexão Solidária">
+            <div class="brand-circle-shell">
+                <div class="brand-circle">
+                    <div class="brand-logo-mask">
+                        <img class="brand-logo" src="images/conexao-solidaria-logo.png" alt="Logo da Conexão Solidária" />
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<style>
+    .register-shell {
+        min-height: 100vh;
+        width: 100%;
+        display: flex;
+        padding: 0;
+        margin: 0;
+    }
+
+    .register-stage {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        width: 100%;
+        min-height: 100vh;
+        background: #fff;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .register-panel-left {
+        flex: 2 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 24px;
+        padding: 48px;
+        box-sizing: border-box;
+    }
+
+    .register-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .register-form {
+        width: min(100%, 43rem);
+    }
+
+    .register-kicker,
+    .register-link {
+        color: #6d28d9;
+        letter-spacing: 0.08em;
+        font-size: 18px;
+    }
+
+    .register-link {
+        text-decoration: none;
+        width: fit-content;
+    }
+
+    .register-heading {
+        font-weight: 700;
+    }
+
+    .register-description {
+        color: #6b7280;
+        max-width: 460px;
+    }
+
+    .register-panel-right {
+        flex: 3 1 0;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ede9fe;
+        padding: 48px;
+        box-sizing: border-box;
+        position: relative;
+    }
+
+    .brand-circle-shell {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .brand-circle {
+        width: 320px;
+        height: 320px;
+        border-radius: 50%;
+        overflow: hidden;
+        background-color: #6d28d9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .brand-logo-mask {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .brand-logo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scale(1.2);
+        transform-origin: center;
+    }
+
+    :deep(.mud-input-control) {
+        margin-top: 0;
+    }
+
+    :deep(.mud-input-outlined) {
+        border-radius: 1rem;
+    }
+
+    :deep(.mud-button-root) {
+        border-radius: 0.95rem;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+        min-height: 3.25rem;
+        text-transform: none;
+    }
+
+    @@media (max-width: 768px) {
+        .register-stage {
+            flex-direction: column;
+            min-height: auto;
+        }
+
+        .register-panel-left,
+        .register-panel-right {
+            flex: 1 1 auto;
+            padding: 32px 24px;
+        }
+
+        .register-panel-right {
+            min-height: 260px;
+        }
+
+        .brand-circle {
+            width: 220px;
+            height: 220px;
+        }
+    }
+</style>
+
+@code {
+    private readonly RegisterFormModel _model = new();
+    private readonly PatternMask _cpfMask = new("000.000.000-00");
+    private string? _errorMessage;
+    private bool _isSubmitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureInitializedAsync();
+
+        if (Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/", replace: true);
+        }
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        _errorMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync(
+                "api/User/registration",
+                new RegisterRequest
+                {
+                    Name = _model.Name.Trim(),
+                    Email = _model.Email.Trim(),
+                    Cpf = _model.GetSanitizedCpf(),
+                    Password = _model.Password
+                });
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Cadastro realizado com sucesso. Agora você já pode entrar.", Severity.Success);
+                Navigation.NavigateTo("/login", replace: true);
+                return;
+            }
+
+            var failure = await response.Content.ReadFromJsonAsync<LoginErrorResponse>();
+            _errorMessage = failure?.Message ?? "Não foi possível concluir o cadastro com os dados informados.";
+        }
+        catch
+        {
+            _errorMessage = "Não foi possível se conectar ao servidor no momento.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

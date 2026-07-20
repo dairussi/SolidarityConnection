@@ -1,4 +1,5 @@
 using SolidarityConnection.Domain.Common.Enums;
+using SolidarityConnection.Domain.Common.Exceptions;
 using SolidarityConnection.Domain.Common.Models;
 using SolidarityConnection.Domain.User.ValueObjects;
 
@@ -10,7 +11,7 @@ public class User : BaseModel
     private User(string name, EmailAddress email, CpfValidator cpf, string passwordHash, EUserRole role)
     {
         PublicId = Guid.NewGuid();
-        Name = name;
+        Name = ValidateName(name);
         Email = email;
         Cpf = cpf;
         PasswordHash = passwordHash;
@@ -32,7 +33,7 @@ public class User : BaseModel
 
     public void UpdateDetails(string name, EmailAddress email, CpfValidator cpf)
     {
-        Name = name;
+        Name = ValidateName(name);
         Email = email;
         Cpf = cpf;
     }
@@ -52,5 +53,18 @@ public class User : BaseModel
         Role = Role == EUserRole.Doador
             ? EUserRole.GestorONG
             : EUserRole.Doador;
+    }
+
+    private static string ValidateName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException("Nome e requerido.");
+
+        var trimmedName = name.Trim();
+
+        if (!trimmedName.Contains(' '))
+            throw new DomainException("Nome deve ser completo.");
+
+        return trimmedName;
     }
 }

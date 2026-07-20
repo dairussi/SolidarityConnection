@@ -14,6 +14,7 @@ using SolidarityConnection.Application.Features.Campaigns.Queries.GetActiveCampa
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignById;
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaigns;
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetCampaignsPaged;
+using SolidarityConnection.Application.Features.Campaigns.Queries.GetTransparencyDashboard;
 using SolidarityConnection.Application.Features.Donations.Commands.CreateDonation;
 using SolidarityConnection.Application.Features.Donations.Queries.GetMyTotalsByCampaign;
 using SolidarityConnection.Application.Features.Users.Commands.AddUser;
@@ -30,8 +31,6 @@ using SolidarityConnection.Infrastructure.Persistence.Interceptors;
 using SolidarityConnection.Infrastructure.Persistence.Mongo;
 using SolidarityConnection.Infrastructure.Repositories;
 using SolidarityConnection.Infrastructure.Services;
-using SolidarityConnection.Infrastructure.Persistence.Mongo;
-using SolidarityConnection.Application.Features.Campaigns.Queries.GetTransparencyDashboard;
 using System.Text;
 
 namespace SolidarityConnection.Infrastructure.DI;
@@ -54,12 +53,20 @@ public static class DependencyInjection
         services.Configure<RabbitMqOptions>(configuration.GetSection("RabbitMQ"));
         services.Configure<PendingDonationReprocessingOptions>(
             configuration.GetSection("BackgroundJobs:PendingDonationReprocessing"));
+        services.Configure<CampaignTransparencyBackfillOptions>(
+            configuration.GetSection("BackgroundJobs:CampaignTransparencyBackfill"));
 
         var pendingDonationReprocessingOptions =
             configuration
                 .GetSection("BackgroundJobs:PendingDonationReprocessing")
                 .Get<PendingDonationReprocessingOptions>()
             ?? new PendingDonationReprocessingOptions();
+
+        var campaignTransparencyBackfillOptions =
+            configuration
+                .GetSection("BackgroundJobs:CampaignTransparencyBackfill")
+                .Get<CampaignTransparencyBackfillOptions>()
+            ?? new CampaignTransparencyBackfillOptions();
 
         services.AddScoped<ICampaignRepository, CampaignRepository>();
         services.AddScoped<IDonationRepository, DonationRepository>();
@@ -88,22 +95,34 @@ public static class DependencyInjection
         services.AddScoped<DonationProcessedConsumer>();
         services.AddSingleton<IMessagePublisher, RabbitMqPublisher>();
         services.AddHostedService<RabbitMqDonationProcessedConsumerHostedService>();
+
         services.Configure<MongoOptions>(configuration.GetSection("Mongo"));
         services.AddSingleton<MongoCampaignTransparencyRepository>();
         services.AddSingleton<ICampaignTransparencyReader>(sp => sp.GetRequiredService<MongoCampaignTransparencyRepository>());
         services.AddSingleton<ICampaignTransparencyWriter>(sp => sp.GetRequiredService<MongoCampaignTransparencyRepository>());
         services.AddScoped<IGetTransparencyDashboardQueryHandler, GetTransparencyDashboardQueryHandler>();
+
         services.AddQuartz(quartz =>
         {
-            var jobKey = new JobKey(nameof(PendingDonationReprocessingJob));
+            var pendingDonationJobKey = new JobKey(nameof(PendingDonationReprocessingJob));
+            var transparencyBackfillJobKey = new JobKey(nameof(CampaignTransparencyBackfillJob));
 
-            quartz.AddJob<PendingDonationReprocessingJob>(options => options.WithIdentity(jobKey));
+            quartz.AddJob<PendingDonationReprocessingJob>(options => options.WithIdentity(pendingDonationJobKey));
             quartz.AddTrigger(options => options
-                .ForJob(jobKey)
+                .ForJob(pendingDonationJobKey)
                 .WithIdentity($"{nameof(PendingDonationReprocessingJob)}-trigger")
                 .StartNow()
                 .WithSimpleSchedule(schedule => schedule
                     .WithInterval(TimeSpan.FromMinutes(Math.Max(1, pendingDonationReprocessingOptions.IntervalInMinutes)))
+                    .RepeatForever()));
+
+            quartz.AddJob<CampaignTransparencyBackfillJob>(options => options.WithIdentity(transparencyBackfillJobKey));
+            quartz.AddTrigger(options => options
+                .ForJob(transparencyBackfillJobKey)
+                .WithIdentity($"{nameof(CampaignTransparencyBackfillJob)}-trigger")
+                .StartNow()
+                .WithSimpleSchedule(schedule => schedule
+                    .WithInterval(TimeSpan.FromMinutes(Math.Max(1, campaignTransparencyBackfillOptions.IntervalInMinutes)))
                     .RepeatForever()));
         });
         services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
@@ -169,7 +188,6 @@ public static class DependencyInjection
                 rabbitConnectionString: $"amqp://{configuration["RabbitMQ:Username"]}:{configuration["RabbitMQ:Password"]}@{configuration["RabbitMQ:Host"]}:{configuration["RabbitMQ:Port"]}/",
                 name: "rabbitmq",
                 tags: new[] { "messaging" });
-
 
         return services;
     }

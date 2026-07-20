@@ -1,0 +1,222 @@
+@page "/login"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject AppSessionService Session
+@inject NavigationManager Navigation
+
+<PageTitle>Conexão Solidária | Login</PageTitle>
+
+<div class="login-shell">
+    <div class="login-stage">
+        <section class="login-panel login-panel-left">
+            <div class="login-copy">
+                <MudText Typo="Typo.overline" Class="login-kicker">Conexão Solidária</MudText>
+                <MudText Typo="Typo.h4" Class="login-heading">Bem-vindo de volta</MudText>
+                <MudText Typo="Typo.body1" Class="login-description">
+                    Entre para acompanhar campanhas, doações e conexões que transformam apoio em impacto real.
+                </MudText>
+            </div>
+
+            <LoginForm
+                ErrorMessage="@_errorMessage"
+                IsSubmitting="@_isSubmitting"
+                OnSubmit="HandleSubmitAsync" />
+            <NavLink href="/cadastro" Typo="Typo.overline" Class="login-kicker">Não possui conta? Cadastre-se</NavLink>
+        </section>
+
+        <section class="login-panel login-panel-right" aria-label="Identidade visual da Conexão Solidária">
+            <div class="brand-circle-shell">
+                <div class="brand-circle">
+                    <div class="brand-logo-mask">
+                        <img class="brand-logo" src="images/conexao-solidaria-logo.png" alt="Logo da Conexão Solidária" />
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<style>
+    .login-shell {
+        min-height: 100vh;
+        width: 100%;
+        display: flex;
+        padding: 0;
+        margin: 0;
+    }
+
+    .login-stage {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        width: 100%;
+        min-height: 100vh;
+        background: #fff;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .login-panel-left {
+        flex: 2 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 24px;
+        padding: 48px;
+        box-sizing: border-box;
+    }
+
+    .login-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .login-kicker {
+        color: #6d28d9;
+        letter-spacing: 0.08em;
+        font-size: 18px;
+    }
+
+    .login-heading {
+        font-weight: 700;
+    }
+
+    .login-description {
+        color: #6b7280;
+        max-width: 460px;
+    }
+
+    .login-panel-right {
+        flex: 3 1 0;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ede9fe;
+        padding: 48px;
+        box-sizing: border-box;
+        position: relative;
+    }
+
+    .brand-circle-shell {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .brand-circle {
+        width: 320px;
+        height: 320px;
+        border-radius: 50%;
+        overflow: hidden;
+        background-color: #6d28d9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .brand-logo-mask {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .brand-logo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scale(1.2);
+        transform-origin: center;
+    }
+
+    @@media (max-width: 768px) {
+        .login-stage {
+            flex-direction: column;
+            min-height: auto;
+        }
+
+        .login-panel-left,
+        .login-panel-right {
+            flex: 1 1 auto;
+            padding: 32px 24px;
+        }
+
+        .login-panel-right {
+            min-height: 260px;
+        }
+
+        .brand-circle {
+            width: 220px;
+            height: 220px;
+        }
+    }
+</style>
+
+@code {
+    private string? _errorMessage;
+    private bool _isSubmitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureInitializedAsync();
+
+        if (Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/", replace: true);
+        }
+    }
+
+    private async Task HandleSubmitAsync(LoginFormModel model)
+    {
+        _errorMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync(
+                "api/Auth/login",
+                new LoginRequest
+                {
+                    Email = model.Email,
+                    Password = model.Password
+                });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+
+                if (loginResponse is null || string.IsNullOrWhiteSpace(loginResponse.Token))
+                {
+                    _errorMessage = "Não foi possível concluir o login.";
+                    return;
+                }
+
+                var userName = string.IsNullOrWhiteSpace(loginResponse.Name) ? "usuaria" : loginResponse.Name;
+
+                await Session.SignInAsync(loginResponse);
+                Snackbar.Add($"Login realizado com sucesso. Bem-vinda, {userName}.", Severity.Success);
+                Navigation.NavigateTo("/", replace: true);
+                return;
+            }
+
+            var failure = await response.Content.ReadFromJsonAsync<LoginErrorResponse>();
+            _errorMessage = failure?.Message ?? "Não foi possível realizar o login com os dados informados.";
+        }
+        catch
+        {
+            _errorMessage = "Não foi possível se conectar ao servidor no momento.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

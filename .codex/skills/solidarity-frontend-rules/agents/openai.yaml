@@ -1,0 +1,7 @@
+interface:
+  display_name: "Solidarity Frontend Rules"
+  short_description: "Padroes automaticos do frontend do projeto"
+  default_prompt: "Use $solidarity-frontend-rules para trabalhar no frontend deste projeto seguindo os padroes locais."
+
+policy:
+  allow_implicit_invocation: true

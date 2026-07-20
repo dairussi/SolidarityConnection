@@ -11,21 +11,39 @@ public sealed class UpdateCampaignStatusCommandHandler(
     ICampaignTransparencyWriter transparencyWriter) : IUpdateCampaignStatusCommandHandler
 {
     public async Task<ResultData<CampaignOutput>> Handle(
-        UpdateCampaignStatusCommand command, CancellationToken cancellationToken)
+        UpdateCampaignStatusCommand command,
+        CancellationToken cancellationToken)
     {
         var campaign = await campaignRepository.GetByIdAsync(command.CampaignId, cancellationToken);
+
         if (campaign is null)
+        {
             return ResultData<CampaignOutput>.Error("Campanha não encontrada.");
+        }
 
         switch (command.Status)
         {
-            case CampaignStatus.Paused: campaign.PauseCampaign(); break;
-            case CampaignStatus.Closed: campaign.CloseCampaign(); break;
-            default: return ResultData<CampaignOutput>.Error("A atualização de status da campanha aceita apenas Pausada ou Encerrada.");
+            case CampaignStatus.Active:
+                campaign.ActivateCampaign();
+                break;
+
+            case CampaignStatus.Paused:
+                campaign.PauseCampaign();
+                break;
+
+            case CampaignStatus.Closed:
+                campaign.CloseCampaign();
+                break;
+
+            default:
+                return ResultData<CampaignOutput>.Error("O status informado para a campanha é inválido.");
         }
 
         await campaignRepository.UpdateAsync(campaign, cancellationToken);
-        await transparencyWriter.UpdateStatusAsync(campaign.Id, campaign.Status.ToString(), cancellationToken);
+        await transparencyWriter.UpdateStatusAsync(
+            campaign.Id,
+            campaign.Status.ToString(),
+            cancellationToken);
 
         return ResultData<CampaignOutput>.Success(campaign.ToOutput());
     }

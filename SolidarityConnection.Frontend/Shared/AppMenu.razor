@@ -1,0 +1,628 @@
+@using System.Globalization
+@using System.Text
+@implements IDisposable
+@inject AppSessionService Session
+@inject NavigationManager Navigation
+
+<header class="app-menu-shell">
+    <div class="app-menu">
+        <NavLink href="/" class="brand-link">
+            <img class="brand-mark" src="images/conexao-solidaria-logo.png" alt="Conexão Solidária" />
+            <div class="brand-copy">
+                <span class="brand-kicker">Conexão Solidária</span>
+                <strong class="brand-title">Campanhas e apoio</strong>
+            </div>
+        </NavLink>
+
+        <nav class="app-nav" aria-label="Navegação principal">
+            <a href="/transparencia/index.html"
+               class="portal-link"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Abrir Portal da Transparência em nova guia">
+                <span class="portal-link-icon" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.QueryStats" Size="Size.Medium" />
+                </span>
+
+                <span class="portal-link-copy">
+                    <strong class="portal-link-title">Portal da Transparência</strong>
+                </span>
+            </a>
+        </nav>
+
+        <div class="menu-user-area">
+            <button type="button"
+                    class="profile-trigger @(Session.IsAuthenticated ? "profile-trigger-authenticated" : "profile-trigger-guest")"
+                    @onclick="HandleProfileActionAsync"
+                    aria-label="@(Session.IsAuthenticated ? "Abrir menu do perfil" : "Entrar")"
+                    aria-expanded="@_isSideMenuOpen"
+                    aria-controls="user-side-menu">
+                @if (Session.IsAuthenticated)
+                {
+                    <img class="profile-trigger-avatar" src="@GetAvatarPath(Session.CurrentUser.Name)" alt="Avatar do usuário" />
+                }
+                else
+                {
+                    <span class="profile-trigger-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.PersonOutline" Size="Size.Small" />
+                    </span>
+                }
+
+                <span class="profile-trigger-copy">
+                    <strong class="profile-trigger-title">@(Session.IsAuthenticated ? Session.CurrentUser.Name : "Entrar")</strong>
+                </span>
+            </button>
+        </div>
+    </div>
+</header>
+
+@if (Session.IsAuthenticated)
+{
+    <div class="side-menu-backdrop @(_isSideMenuOpen ? "side-menu-backdrop-visible" : string.Empty)"
+         @onclick="CloseSideMenu"
+         aria-hidden="@(!_isSideMenuOpen)"></div>
+
+    <aside id="user-side-menu"
+           class="user-side-menu @(_isSideMenuOpen ? "user-side-menu-open" : string.Empty)"
+           aria-hidden="@(!_isSideMenuOpen)">
+        <div class="user-side-menu-header">
+            <div class="user-side-menu-profile">
+                <img class="user-side-menu-avatar" src="@GetAvatarPath(Session.CurrentUser.Name)" alt="Avatar do usuário" />
+                <div class="user-side-menu-copy">
+                    <strong class="user-side-menu-name">@Session.CurrentUser.Name</strong>
+                </div>
+            </div>
+
+            <button type="button" class="user-side-menu-close" @onclick="CloseSideMenu" aria-label="Fechar menu lateral">
+                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Medium" />
+            </button>
+        </div>
+
+        <nav class="user-side-menu-nav" aria-label="Atalhos do usuário">
+            <NavLink href="/doacoes" class="side-menu-link" @onclick="CloseSideMenuFromNavAsync">
+                Doações
+            </NavLink>
+
+            @if (Session.IsAdmin)
+            {
+                <NavLink href="/usuarios" class="side-menu-link" @onclick="CloseSideMenuFromNavAsync">
+                    Usuários
+                </NavLink>
+
+                <NavLink href="/campanhas/nova" class="side-menu-link" @onclick="CloseSideMenuFromNavAsync">
+                    Campanha
+                </NavLink>
+            }
+        </nav>
+
+        <div class="user-side-menu-footer">
+            <button type="button" class="logout-button" @onclick="HandleLogoutAsync">Sair</button>
+        </div>
+    </aside>
+}
+
+<style>
+    .app-menu-shell {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        padding: 0;
+        background: #4c1d95;
+        box-shadow: 0 1px 0 rgba(46, 16, 101, 0.35);
+    }
+
+    .app-menu {
+        width: 100%;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        justify-content: space-between;
+        min-height: var(--app-menu-height, 3.9rem);
+        padding: 0.55rem 1rem;
+        box-sizing: border-box;
+    }
+
+    .brand-link {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        min-width: 0;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .brand-mark {
+        width: 2.35rem;
+        height: 2.35rem;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #ede9fe;
+        flex-shrink: 0;
+    }
+
+    .brand-copy {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        gap: 0.08rem;
+    }
+
+    .brand-kicker {
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #ddd6fe;
+        line-height: 1.05;
+    }
+
+    .brand-title {
+        color: #fff;
+        white-space: nowrap;
+        line-height: 1.1;
+        font-size: 0.95rem;
+    }
+
+    .app-nav {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+    }
+
+    .portal-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        max-width: min(100%, 22rem);
+        padding: 0.42rem 0.9rem 0.42rem 0.5rem;
+        border-radius: 999px;
+        color: #ffffff;
+        text-decoration: none;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(196, 181, 253, 0.14));
+        box-shadow: inset 0 0 0 1px rgba(221, 214, 254, 0.35);
+        transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .portal-link:hover {
+        transform: translateY(-1px);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(196, 181, 253, 0.2));
+        box-shadow: inset 0 0 0 1px rgba(237, 233, 254, 0.55);
+    }
+
+    .portal-link:focus-visible {
+        outline: 2px solid #ffffff;
+        outline-offset: 3px;
+    }
+
+    .portal-link-icon {
+        width: 2.2rem;
+        height: 2.2rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: #4c1d95;
+        background: #fef3c7;
+        box-shadow: 0 10px 24px rgba(76, 29, 149, 0.18);
+        flex-shrink: 0;
+    }
+
+    .portal-link-copy {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .portal-link-title {
+        white-space: nowrap;
+        line-height: 1.05;
+        font-size: 0.92rem;
+    }
+
+    .portal-link-subtitle {
+        color: #ddd6fe;
+        font-size: 0.75rem;
+        line-height: 1.1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .menu-user-area {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        min-width: 0;
+    }
+
+    .profile-trigger,
+    .logout-button,
+    .user-side-menu-close {
+        border: 0;
+        font: inherit;
+    }
+
+    .profile-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        min-height: 2.6rem;
+        padding: 0.28rem 0.8rem 0.28rem 0.28rem;
+        border-radius: 999px;
+        background: #f5f3ff;
+        color: #111827;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .profile-trigger:hover {
+        background: #ede9fe;
+    }
+
+    .profile-trigger:focus-visible,
+    .side-menu-link:focus-visible,
+    .logout-button:focus-visible,
+    .user-side-menu-close:focus-visible {
+        outline: 2px solid #6d28d9;
+        outline-offset: 3px;
+    }
+
+    .profile-trigger-guest {
+        background: #ede9fe;
+    }
+
+    .profile-trigger-authenticated {
+        max-width: min(100%, 16rem);
+    }
+
+    .profile-trigger-icon,
+    .profile-trigger-avatar {
+        width: 2.05rem;
+        height: 2.05rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .profile-trigger-icon {
+        background: #ede9fe;
+        color: #6d28d9;
+    }
+
+    .profile-trigger-avatar {
+        object-fit: cover;
+        background: #fff;
+    }
+
+    .profile-trigger-copy {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        min-width: 0;
+        text-align: left;
+    }
+
+    .profile-trigger-title {
+        color: #111827;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 11rem;
+        font-size: 0.98rem;
+        line-height: 1.05;
+    }
+
+    .side-menu-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(17, 24, 39, 0.32);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 39;
+    }
+
+    .side-menu-backdrop-visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .user-side-menu {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: min(100%, 22rem);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1.25rem;
+        box-sizing: border-box;
+        background: #fff;
+        box-shadow: -18px 0 48px rgba(17, 24, 39, 0.18);
+        transform: translateX(100%);
+        transition: transform 0.22s ease;
+        z-index: 40;
+    }
+
+    .user-side-menu-open {
+        transform: translateX(0);
+    }
+
+    .user-side-menu-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .user-side-menu-profile {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        min-width: 0;
+    }
+
+    .user-side-menu-avatar {
+        width: 3.25rem;
+        height: 3.25rem;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #f5f3ff;
+    }
+
+    .user-side-menu-copy {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 0;
+        min-height: 3.25rem;
+    }
+
+    .user-side-menu-name {
+        color: #111827;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .user-side-menu-close {
+        width: 2.75rem;
+        height: 2.75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: #f5f3ff;
+        color: #6d28d9;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .user-side-menu-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .side-menu-link {
+        display: flex;
+        align-items: center;
+        min-height: 3.25rem;
+        padding: 0 1rem;
+        border-radius: 1rem;
+        color: #4b5563;
+        text-decoration: none;
+        font-weight: 700;
+        background: #fff;
+        box-shadow: inset 0 0 0 1px #ede9fe;
+        transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .side-menu-link:hover {
+        background: #f5f3ff;
+        color: #6d28d9;
+        box-shadow: inset 0 0 0 1px #ddd6fe;
+    }
+
+    .side-menu-link.active {
+        background: #f8f5ff;
+        color: #6d28d9;
+        box-shadow: inset 0 0 0 1px #ddd6fe;
+    }
+
+    .user-side-menu-footer {
+        margin-top: auto;
+    }
+
+    .logout-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 3rem;
+        padding: 0 1rem;
+        border-radius: 999px;
+        background: #fff;
+        color: #6d28d9;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: inset 0 0 0 1px #ddd6fe;
+        transition: background-color 0.2s ease;
+    }
+
+    .logout-button:hover,
+    .user-side-menu-close:hover {
+        filter: brightness(0.98);
+    }
+
+    @@media (max-width: 960px) {
+        .app-menu {
+            padding: 0.5rem 0.9rem;
+        }
+
+        .brand-copy {
+            min-width: 0;
+        }
+
+        .brand-title {
+            white-space: normal;
+        }
+
+        .portal-link {
+            padding-right: 0.78rem;
+        }
+
+        .portal-link-subtitle {
+            display: none;
+        }
+
+        .profile-trigger {
+            max-width: 100%;
+        }
+
+        .profile-trigger-title {
+            max-width: 7rem;
+        }
+    }
+
+    @@media (max-width: 640px) {
+        .app-menu {
+            gap: 0.6rem;
+        }
+
+        .brand-link {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .app-nav {
+            flex: 0 1 auto;
+        }
+
+        .portal-link {
+            gap: 0.55rem;
+            padding: 0.34rem 0.72rem 0.34rem 0.42rem;
+        }
+
+        .portal-link-icon {
+            width: 1.95rem;
+            height: 1.95rem;
+        }
+
+        .portal-link-title {
+            font-size: 0.82rem;
+        }
+
+        .profile-trigger-copy {
+            max-width: 6.25rem;
+        }
+
+        .user-side-menu {
+            width: 100%;
+            padding: 1rem;
+        }
+    }
+</style>
+
+@code {
+    private bool _isSideMenuOpen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Session.Changed += HandleSessionChanged;
+        await Session.EnsureInitializedAsync();
+    }
+
+    private void HandleSessionChanged()
+    {
+        if (!Session.IsAuthenticated)
+        {
+            _isSideMenuOpen = false;
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleProfileActionAsync()
+    {
+        if (!Session.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return Task.CompletedTask;
+        }
+
+        _isSideMenuOpen = !_isSideMenuOpen;
+        return Task.CompletedTask;
+    }
+
+    private void CloseSideMenu()
+    {
+        _isSideMenuOpen = false;
+    }
+
+    private Task CloseSideMenuFromNavAsync()
+    {
+        _isSideMenuOpen = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleLogoutAsync()
+    {
+        _isSideMenuOpen = false;
+        await Session.SignOutAsync();
+        Navigation.NavigateTo("/", replace: true);
+    }
+
+    private static string GetAvatarPath(string? userName)
+    {
+        if (string.IsNullOrWhiteSpace(userName))
+        {
+            return "images/avatars/avatar-a-h.png";
+        }
+
+        var initial = GetNormalizedInitial(userName);
+
+        if (initial is >= 'A' and <= 'H')
+        {
+            return "images/avatars/avatar-a-h.png";
+        }
+
+        if (initial is >= 'I' and <= 'P')
+        {
+            return "images/avatars/avatar-i-p.png";
+        }
+
+        return "images/avatars/avatar-q-z.png";
+    }
+
+    private static char GetNormalizedInitial(string userName)
+    {
+        var normalized = userName.Trim().Normalize(NormalizationForm.FormD);
+
+        foreach (var character in normalized)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(character) == UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            if (char.IsLetter(character))
+            {
+                return char.ToUpperInvariant(character);
+            }
+        }
+
+        return 'A';
+    }
+
+    public void Dispose()
+    {
+        Session.Changed -= HandleSessionChanged;
+    }
+}

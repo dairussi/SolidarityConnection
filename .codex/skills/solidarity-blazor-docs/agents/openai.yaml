@@ -1,0 +1,7 @@
+interface:
+  display_name: "Solidarity Blazor Docs"
+  short_description: "Blazor docs e padroes do projeto"
+  default_prompt: "Use $solidarity-blazor-docs para implementar ou revisar Blazor WebAssembly neste projeto."
+
+policy:
+  allow_implicit_invocation: true

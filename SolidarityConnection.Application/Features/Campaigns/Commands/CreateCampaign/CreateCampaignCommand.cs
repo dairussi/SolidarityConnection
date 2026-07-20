@@ -1,3 +1,5 @@
+using SolidarityConnection.Domain.Campaign.Enums;
+
 namespace SolidarityConnection.Application.Features.Campaigns.Commands.CreateCampaign;
 
 public sealed record CreateCampaignCommand(
@@ -6,4 +8,5 @@ public sealed record CreateCampaignCommand(
     DateTime StartDate,
     DateTime EndDate,
     decimal TargetAmount,
+    CampaignStatus Status,
     int ManagerId);

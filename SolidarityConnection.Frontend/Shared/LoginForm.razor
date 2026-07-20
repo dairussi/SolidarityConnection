@@ -1,0 +1,68 @@
+<EditForm Model="@_model" OnValidSubmit="SubmitAsync">
+    <DataAnnotationsValidator />
+
+    <div class="login-card">
+        <MudStack Spacing="3">
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Dense="true">
+                    @ErrorMessage
+                </MudAlert>
+            }
+
+            <MudTextField T="string"
+                          Label="E-mail"
+                          Placeholder="Digite seu e-mail"
+                          Variant="Variant.Outlined"
+                          FullWidth="true"
+                          Immediate="true"
+                          For="@(() => _model.Email)"
+                          @bind-Value="_model.Email" />
+
+            <MudTextField T="string"
+                          Label="Senha"
+                          Placeholder="Digite sua senha"
+                          InputType="InputType.Password"
+                          Variant="Variant.Outlined"
+                          FullWidth="true"
+                          Immediate="true"
+                          For="@(() => _model.Password)"
+                          @bind-Value="_model.Password" />
+
+            <MudButton ButtonType="ButtonType.Submit"
+                       Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       Size="Size.Large"
+                       FullWidth="true"
+                       Disabled="@IsSubmitting">
+                @if (IsSubmitting)
+                {
+                    <MudProgressCircular Class="me-2"
+                                         Color="Color.Inherit"
+                                         Size="Size.Small"
+                                         Indeterminate="true" />
+                    <span>Entrando...</span>
+                }
+                else
+                {
+                    <span>Entrar</span>
+                }
+            </MudButton>
+        </MudStack>
+    </div>
+</EditForm>
+
+@code {
+    private readonly LoginFormModel _model = new();
+
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    [Parameter]
+    public bool IsSubmitting { get; set; }
+
+    [Parameter]
+    public EventCallback<LoginFormModel> OnSubmit { get; set; }
+
+    private Task SubmitAsync() => OnSubmit.InvokeAsync(_model);
+}

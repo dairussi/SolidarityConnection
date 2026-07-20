@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portal da Transparência — Conexão Solidária</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; background:#0f172a; color:#e2e8f0; padding:24px; }
+        a { color: #93c5fd; }
+        h1 { font-size:1.4rem; margin-bottom: 0.35rem; }
+        .intro { color: #94a3b8; margin-top: 0; }
+        .actions { margin: 1rem 0 1.25rem; }
+        .actions a {
+            display: inline-flex;
+            align-items: center;
+            min-height: 2.5rem;
+            padding: 0 1rem;
+            border-radius: 999px;
+            background: #1d4ed8;
+            color: #eff6ff;
+            text-decoration: none;
+            font-weight: 700;
+        }
+        .kpis { display:flex; gap:16px; margin:20px 0; flex-wrap: wrap; }
+        .kpi { background:#1e293b; border-radius:8px; padding:16px 24px; flex:1 1 220px; }
+        .kpi span { display:block; font-size:0.8rem; color:#94a3b8; }
+        .kpi strong { font-size:1.6rem; }
+        .empty-state,
+        .error-state {
+            display: none;
+            background: #172554;
+            border: 1px solid #1d4ed8;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin: 18px 0;
+            color: #dbeafe;
+        }
+        .error-state {
+            background: #3f1d1d;
+            border-color: #dc2626;
+            color: #fecaca;
+        }
+        canvas { background:#1e293b; border-radius:8px; padding:16px; margin-bottom:24px; }
+        ul { list-style:none; padding:0; }
+        li { background:#1e293b; padding:10px 14px; border-radius:6px; margin-bottom:6px; }
+    </style>
+</head>
+<body>
+    <h1>Portal da Transparência — Conexão Solidária</h1>
+    <p class="intro">Dados públicos das campanhas e das doações confirmadas.</p>
+    <div class="actions">
+        <a href="/">Voltar para campanhas</a>
+    </div>
+
+    <div id="emptyState" class="empty-state">
+        Nenhum dado de transparência está disponível no momento. Estamos sincronizando as campanhas para exibir as informações aqui em breve.
+    </div>
+    <div id="errorState" class="error-state">
+        Não foi possível carregar o portal da transparência agora. Tente novamente em instantes.
+    </div>
+
+    <div class="kpis">
+        <div class="kpi"><span>Total arrecadado</span><strong id="totalRaised">—</strong></div>
+        <div class="kpi"><span>Campanhas ativas</span><strong id="totalCampaigns">—</strong></div>
+        <div class="kpi"><span>Doações confirmadas</span><strong id="totalDonors">—</strong></div>
+    </div>
+
+    <canvas id="campaignChart" height="90"></canvas>
+    <h2>Últimas doações</h2>
+    <ul id="feed"></ul>
+
+<script>
+let chart;
+let hasSuccessfulLoad = false;
+const emptyState = document.getElementById('emptyState');
+const errorState = document.getElementById('errorState');
+
+
+function hideStatusMessages() {
+  emptyState.style.display = 'none';
+  errorState.style.display = 'none';
+}
+
+function renderEmptyState() {
+  emptyState.style.display = 'block';
+  document.getElementById('feed').innerHTML = '<li>Nenhuma doação recente disponível.</li>';
+
+  if (chart) {
+    chart.data.labels = [];
+    chart.data.datasets[0].data = [];
+    chart.data.datasets[1].data = [];
+    chart.update();
+  }
+}
+
+async function loadData() {
+  try {
+    const res = await fetch('/api/campaign/transparency-dashboard?page=1&pageSize=20');
+
+    if (!res.ok) {
+      throw new Error('Falha ao carregar os dados do portal.');
+    }
+
+    const data = await res.json();
+    const items = data.items ?? [];
+
+    hideStatusMessages();
+    hasSuccessfulLoad = true;
+
+    document.getElementById('totalRaised').textContent =
+      items.reduce((sum, c) => sum + c.amountRaised, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    document.getElementById('totalCampaigns').textContent = items.length;
+    document.getElementById('totalDonors').textContent =
+      items.reduce((sum, c) => sum + c.donorsCount, 0);
+
+    const labels = items.map(c => c.title);
+    const target = items.map(c => c.targetAmount);
+    const raised = items.map(c => c.amountRaised);
+
+    if (!chart) {
+      chart = new Chart(document.getElementById('campaignChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Meta', data: target, backgroundColor: '#334155' },
+            { label: 'Arrecadado', data: raised, backgroundColor: '#22c55e' }
+          ]
+        },
+        options: { responsive: true, plugins: { legend: { labels: { color: '#e2e8f0' } } },
+          scales: { x: { ticks: { color: '#e2e8f0' } }, y: { ticks: { color: '#e2e8f0' } } } }
+      });
+    } else {
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = target;
+      chart.data.datasets[1].data = raised;
+      chart.update();
+    }
+
+    if (!items.length) {
+      renderEmptyState();
+      return;
+    }
+
+    const allDonations = items.flatMap(c =>
+      (c.lastDonations ?? []).map(d => ({ ...d, campaign: c.title })));
+    allDonations.sort((a, b) => new Date(b.processedAt) - new Date(a.processedAt));
+
+    const feed = document.getElementById('feed');
+    feed.innerHTML = allDonations.length
+      ? allDonations.slice(0, 10).map(d =>
+          `<li>${d.campaign} — ${d.amount.toLocaleString('pt-BR', { style:'currency', currency:'BRL' })} (${new Date(d.processedAt).toLocaleTimeString('pt-BR')})</li>`
+        ).join('')
+      : '<li>Nenhuma doação recente disponível.</li>';
+  } catch (error) {
+    if (!hasSuccessfulLoad) {
+      errorState.style.display = 'block';
+    }
+
+    console.error(error);
+  }
+}
+
+loadData();
+setInterval(loadData, 5000);
+</script>
+</body>
+</html>

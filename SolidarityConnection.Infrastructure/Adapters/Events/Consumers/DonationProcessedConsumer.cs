@@ -18,62 +18,85 @@ public sealed class DonationProcessedConsumer(
     {
         var donationStatus = ParseStatus(donationProcessedEvent.Status);
 
+        logger.LogInformation(
+            "Recebido DonationProcessedEvent - DonationId: {DonationId}, Status: {Status}, CampaignId: {CampaignId}, DonorId: {DonorId}",
+            donationProcessedEvent.DonationId,
+            donationStatus,
+            donationProcessedEvent.CampaignId,
+            donationProcessedEvent.DonorId);
+
         var donation = await context.Donations
             .FirstOrDefaultAsync(d => d.Id == donationProcessedEvent.DonationId, cancellationToken);
 
         if (donation is null)
         {
-            logger.LogWarning("Doação {DonationId} não encontrada.", donationProcessedEvent.DonationId);
+            logger.LogWarning(
+                "Doação {DonationId} não encontrada para atualização de status.",
+                donationProcessedEvent.DonationId);
             return;
         }
 
-        if (donation.Status == DonationStatus.Paid)
+        if (donation.Status == donationStatus)
         {
             logger.LogInformation(
-                "Doação {DonationId} já estava confirmada como Paid. Mensagem duplicada/reentregue ignorada com segurança.",
-                donation.Id);
+                "Evento duplicado ignorado para a doação {DonationId}. Status atual já é {Status}.",
+                donation.Id,
+                donation.Status);
             return;
         }
 
+        if (donation.Status == DonationStatus.Paid && donationStatus != DonationStatus.Paid)
+        {
+            logger.LogWarning(
+                "Evento antigo ignorado para a doação {DonationId}. A doação já está paga e recebeu o status {ReceivedStatus}.",
+                donation.Id,
+                donationStatus);
+            return;
+        }
+
+        var wasPaid = donation.Status == DonationStatus.Paid;
         donation.UpdateStatus(donationStatus, donationProcessedEvent.ProcessedAt);
 
-        SolidarityConnection.Domain.Campaign.Models.Campaign? campaign = null;
-
-        if (donationStatus == DonationStatus.Paid)
+        if (!wasPaid && donationStatus == DonationStatus.Paid)
         {
-            campaign = await context.Campaigns
+            var campaign = await context.Campaigns
                 .FirstOrDefaultAsync(c => c.Id == donation.CampaignId, cancellationToken);
 
             if (campaign is null)
-                throw new InvalidOperationException($"Campanha {donation.CampaignId} não encontrada.");
+            {
+                throw new InvalidOperationException(
+                    $"Campanha {donation.CampaignId} não encontrada para atualizar a doação {donation.Id}.");
+            }
 
             campaign.AddDonation(donation.Amount);
         }
 
         await context.SaveChangesAsync(cancellationToken);
 
-        if (campaign is not null)
+        if (!wasPaid && donationStatus == DonationStatus.Paid)
         {
-            try
-            {
-                await transparencyWriter.RegisterDonationAsync(
-                    campaign.Id, donation.Amount, donationProcessedEvent.ProcessedAt, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex,
-                    "Falha ao atualizar o read model do Mongo para a campanha {CampaignId}. O SQL já foi salvo com sucesso.",
-                    campaign.Id);
-            }
+            await transparencyWriter.RegisterDonationAsync(
+                donation.CampaignId,
+                donation.Amount,
+                donationProcessedEvent.ProcessedAt,
+                cancellationToken);
         }
     }
 
-    private static DonationStatus ParseStatus(string status) =>
-        status.Trim().ToLowerInvariant() switch
+    private static DonationStatus ParseStatus(string status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
         {
-            "paid" or "approved" => DonationStatus.Paid,
+            throw new InvalidOperationException("O status da doação não foi informado.");
+        }
+
+        return status.Trim().ToLowerInvariant() switch
+        {
+            "paid" => DonationStatus.Paid,
+            "approved" => DonationStatus.Paid,
             "pending" => DonationStatus.Pending,
             "rejected" => DonationStatus.Rejected,
             _ => throw new InvalidOperationException($"Status de doação desconhecido: {status}.")
         };
+    }
 }

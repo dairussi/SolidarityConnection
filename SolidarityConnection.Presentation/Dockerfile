@@ -5,6 +5,7 @@ WORKDIR /src
 COPY ["SolidarityConnection.Presentation/SolidarityConnection.Presentation.csproj", "SolidarityConnection.Presentation/"]
 COPY ["SolidarityConnection.Application/SolidarityConnection.Application.csproj", "SolidarityConnection.Application/"]
 COPY ["SolidarityConnection.Domain/SolidarityConnection.Domain.csproj", "SolidarityConnection.Domain/"]
+COPY ["SolidarityConnection.Frontend/SolidarityConnection.Frontend.csproj", "SolidarityConnection.Frontend/"]
 COPY ["SolidarityConnection.Infrastructure/SolidarityConnection.Infrastructure.csproj", "SolidarityConnection.Infrastructure/"]
 RUN dotnet restore "SolidarityConnection.Presentation/SolidarityConnection.Presentation.csproj"
 
