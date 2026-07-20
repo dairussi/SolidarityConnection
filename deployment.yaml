@@ -34,6 +34,21 @@ spec:
             - secretRef:
                 name: mongodb-secret
                 optional: true
+          env:
+            - name: RabbitMQ__Host
+              value: "solidarity-connection-rabbitmq"
+            - name: RabbitMQ__Port
+              value: "5672"
+            - name: RabbitMQ__Username
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: username
+            - name: RabbitMQ__Password
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: password
           resources:
             requests:
               cpu: "100m"
