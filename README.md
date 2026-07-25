@@ -19,6 +19,7 @@ Este projeto foi desenvolvido como parte do **Tech Challenge da Pós-Graduação
 - [Stack técnica](#stack-técnica)
 - [Estrutura do repositório](#estrutura-do-repositório)
 - [Como subir o projeto](#como-subir-o-projeto)
+- [Como subir na AWS (EKS + API Gateway)](#como-subir-na-aws-eks--api-gateway)
 - [Secrets e variáveis de ambiente](#secrets-e-variáveis-de-ambiente)
 - [Endpoints da API](#endpoints-da-api)
 - [Fluxo de uma doação](#fluxo-de-uma-doação)
@@ -170,6 +171,94 @@ Sem precisar subir nenhuma infraestrutura, para rodar a suíte de testes unitár
 dotnet restore SolidarityConnection.sln
 dotnet test SolidarityConnection.sln
 ```
+
+## Como subir na AWS (EKS + API Gateway)
+
+O ambiente de produção roda em um cluster **EKS**, com o banco transacional em uma instância **RDS SQL Server** externa ao cluster, e a API exposta publicamente através de um **API Gateway (HTTP API)** conectado ao Load Balancer interno via **VPC Link** — a API em si nunca fica exposta diretamente à internet, só através do Gateway.
+
+```
+Internet ──► API Gateway (HTTP API) ──► VPC Link ──► NLB interno (Service K8s) ──► Pods da API (EKS)
+                                                                                          │
+                                                                          RDS SQL Server ◄┘
+                                                                          RabbitMQ / MongoDB (dentro do EKS)
+```
+
+Todos os scripts abaixo estão no repositório [SolidarityConnectionDeployFile](https://github.com/dairussi/SolidarityConnectionDeployFile) (raiz do projeto, não em `k8s-local/`).
+
+### Pré-requisitos
+
+- Conta AWS com permissões para EKS, RDS, EC2, IAM (leitura de role) e API Gateway v2
+- AWS CLI configurado (`aws sts get-caller-identity` funcionando)
+- Uma IAM Role já existente (por padrão chamada `LabRole`) usada tanto para o cluster quanto para os nodes — comum em ambientes de laboratório/academia
+- `kubectl` (o próprio script `subir_eks.sh` instala automaticamente se não encontrar)
+- Permissão de admin no repositório GitHub para configurar Secrets do Actions
+
+### Passo 1 — Provisionar o RDS (SQL Server gerenciado)
+
+```bash
+chmod +x subir_rds.sh
+./subir_rds.sh
+```
+Cria (se ainda não existir) um Security Group liberando a porta `1433` e uma instância RDS `sqlserver-ex` (`db.t3.small`, 20GB), usando `RDS_USERNAME`/`RDS_PASSWORD` do arquivo `.env`. Ao final, o script mostra o comando para obter o endpoint de conexão assim que a instância terminar de subir:
+```bash
+aws rds describe-db-instances --db-instance-identifier rds-sqlserver-instance --query 'DBInstances[0].Endpoint.Address' --output text
+```
+
+### Passo 2 — Provisionar o cluster EKS e a infraestrutura compartilhada
+
+```bash
+chmod +x subir_eks.sh
+./subir_eks.sh
+```
+Esse script:
+- Cria o cluster EKS (`solidarity-connection-eks`) e o nodegroup (2 nodes `t3.medium` por padrão), usando a VPC/subnets padrão da conta;
+- Cria os namespaces `solidarity-connection-namespace` (app) e `observability`;
+- Sobe **dentro do próprio cluster** o RabbitMQ e o MongoDB (o SQL Server é o único banco externo, via RDS);
+- Sobe a stack de observabilidade compartilhada: Prometheus, Grafana (com dashboard da API já provisionado), Jaeger e Zabbix, todos no namespace `observability`.
+
+Ao final, ele imprime os endereços internos (para health checks/configuração) e os comandos para descobrir os endereços externos (LoadBalancers) do Grafana, Jaeger UI, Zabbix Web e RabbitMQ Management.
+
+### Passo 3 — Deixar o CI/CD publicar a API e o Worker
+
+Com o RDS e o EKS no ar, quem sobe a API e o Worker é o **pipeline do GitHub Actions** deste repositório (`.github/workflows/ci-cd.yml`), não um script manual. Configure os Secrets do repositório (veja a tabela completa em [Secrets](#secrets-e-variáveis-de-ambiente)) apontando para os recursos recém-criados — em especial:
+- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN`
+- `SOLIDARITY_CONNECTION_DB_CONNECTION_STRING` com o endpoint do RDS obtido no Passo 1
+
+Um `push` na branch `main` dispara o pipeline, que builda e escaneia (Trivy) as imagens da API e de migrations, faz push para o Docker Hub, cria/atualiza os Secrets do Kubernetes, roda o Job de migration do banco e por fim aplica o `deployment.yaml`/`service.yaml` (Service do tipo `LoadBalancer`, que gera um NLB interno na AWS).
+
+> O Worker (`SCDonationProcessor`) tem seu próprio pipeline, no repositório dele — consulte o README daquele repositório para os detalhes específicos.
+
+### Passo 4 — Expor a API publicamente via API Gateway
+
+Com a API já rodando (Service `LoadBalancer` ativo), execute:
+
+```bash
+chmod +x subir_gateway_eks.sh
+./subir_gateway_eks.sh
+```
+
+Esse script:
+1. Descobre a VPC, subnets e Security Group do cluster EKS;
+2. Localiza o NLB interno criado pelo Service da API e o listener da porta 80;
+3. Cria (ou reaproveita) um **VPC Link** do API Gateway apontando para esse NLB;
+4. Cria um **HTTP API Gateway** (`solidarity-connection-gateway-eks`) com CORS liberado, uma integração `HTTP_PROXY` via VPC Link, rotas `ANY /` e `ANY /{proxy+}` (repassa qualquer rota/verbo para a API) e um stage `$default` com auto-deploy e *throttling* (100 req/s, burst 200);
+5. Imprime a URL pública final, já com exemplos de rotas (`/swagger/index.html`, `/api/Auth/login`, `/api/Campaign/active`, etc.).
+
+Esse é o desenho que resolve o problema de expor a API sem abrir o NLB/cluster diretamente para a internet: todo tráfego externo passa pelo API Gateway, que fala com o cluster apenas através do VPC Link.
+
+### Passo 5 — Validar o ambiente
+
+Siga a seção [Obtendo endereços e verificando logs](https://github.com/dairussi/SolidarityConnectionDeployFile#obtendo-endereços-e-verificando-logs) do README do repositório de infraestrutura para obter os endereços de Grafana/Jaeger/Zabbix e verificar os logs dos pods da API e do Worker via `kubectl logs`.
+
+### Como derrubar o ambiente na AWS
+
+Na ordem inversa da subida, para evitar recursos órfãos (Load Balancers, EBS volumes):
+
+```bash
+./limpar_gateway_eks.sh   # Remove o API Gateway e o VPC Link
+./limpar_eks.sh           # Remove Services LoadBalancer, namespaces, nodegroup e cluster EKS
+```
+A instância RDS não tem script de remoção automatizado — apague manualmente pelo console AWS ou via `aws rds delete-db-instance --db-instance-identifier rds-sqlserver-instance --skip-final-snapshot` quando não precisar mais dela.
 
 ## Secrets e variáveis de ambiente
 
