@@ -56,11 +56,6 @@ public class Campaign
         return new Campaign(title, description, startDate, endDate, targetAmount, managerId);
     }
 
-    public void CloseCampaign()
-    {
-        Status = CampaignStatus.Closed;
-    }
-
     public void UpdateDetails(
         string title,
         string description,
@@ -87,12 +82,33 @@ public class Campaign
 
     public void PauseCampaign()
     {
-        if (Status == CampaignStatus.Closed)
+        if (Status == CampaignStatus.Cancel || Status == CampaignStatus.Conclude)
         {
-            throw new CampaignDomainException("Uma campanha encerrada não pode ser pausada.");
+            throw new CampaignDomainException("Uma campanha encerrada ou concluída não pode ser pausada.");
         }
 
         Status = CampaignStatus.Paused;
+    }
+
+    public void CancelCampaign()
+    {
+        if(Status == CampaignStatus.Conclude)
+        {
+            throw new CampaignDomainException("Uma campanha concluída não pode ser cancelada.");
+        }
+
+        Status = CampaignStatus.Cancel;
+    }
+
+    public void ConcluedCampaing()
+    {
+        if (Status == CampaignStatus.Active)
+        {
+            Status = CampaignStatus.Conclude;
+            return;
+        }
+
+        throw new CampaignDomainException("Somente uma campanha ativa pode ser concluída.");
     }
 
     public void AddDonation(decimal amount)

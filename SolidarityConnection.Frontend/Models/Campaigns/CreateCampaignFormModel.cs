@@ -55,7 +55,7 @@ public sealed class CreateCampaignFormModel : IValidatableObject
             yield return new ValidationResult("A meta de arrecadação da campanha deve ser maior que zero.", [nameof(TargetAmount)]);
         }
 
-        if (Status is < 1 or > 3)
+        if (Status is < 1 or > 4)
         {
             yield return new ValidationResult("Informe um status inicial válido para a campanha.", [nameof(Status)]);
         }

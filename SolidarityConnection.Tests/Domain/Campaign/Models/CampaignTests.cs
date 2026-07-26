@@ -75,13 +75,49 @@ public class CampaignTests
             500,
             1);
 
-        campaign.CloseCampaign();
+        campaign.CancelCampaign();
 
         Action act = () => campaign.PauseCampaign();
 
         act.Should()
             .Throw<CampaignDomainException>()
-            .WithMessage("Uma campanha encerrada não pode ser pausada.");
+            .WithMessage("Uma campanha encerrada ou concluída não pode ser pausada.");
+    }
+
+    [Fact]
+    public void ConcludeCampaign_ShouldUpdateStatus_WhenCampaignIsActive()
+    {
+        var campaign = CampaignEntity.Create(
+            _faker.Lorem.Sentence(3),
+            _faker.Lorem.Paragraph(),
+            DateTime.UtcNow.Date.AddDays(1),
+            DateTime.UtcNow.Date.AddDays(10),
+            500,
+            1);
+
+        campaign.ConcluedCampaing();
+
+        campaign.Status.Should().Be(CampaignStatus.Conclude);
+    }
+
+    [Fact]
+    public void ConcludeCampaign_ShouldThrowException_WhenCampaignIsNotActive()
+    {
+        var campaign = CampaignEntity.Create(
+            _faker.Lorem.Sentence(3),
+            _faker.Lorem.Paragraph(),
+            DateTime.UtcNow.Date.AddDays(1),
+            DateTime.UtcNow.Date.AddDays(10),
+            500,
+            1);
+
+        campaign.PauseCampaign();
+
+        Action act = () => campaign.ConcluedCampaing();
+
+        act.Should()
+            .Throw<CampaignDomainException>()
+            .WithMessage("Somente uma campanha ativa pode ser concluída.");
     }
 
     [Fact]

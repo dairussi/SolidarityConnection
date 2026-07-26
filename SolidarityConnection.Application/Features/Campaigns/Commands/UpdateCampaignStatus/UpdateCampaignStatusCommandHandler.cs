@@ -3,6 +3,7 @@ using SolidarityConnection.Application.Common.Interfaces;
 using SolidarityConnection.Application.Features.Campaigns.Mappers;
 using SolidarityConnection.Application.Features.Campaigns.Outputs;
 using SolidarityConnection.Domain.Campaign.Enums;
+using SolidarityConnection.Domain.Campaign.Exceptions;
 
 namespace SolidarityConnection.Application.Features.Campaigns.Commands.UpdateCampaignStatus;
 
@@ -14,37 +15,47 @@ public sealed class UpdateCampaignStatusCommandHandler(
         UpdateCampaignStatusCommand command,
         CancellationToken cancellationToken)
     {
-        var campaign = await campaignRepository.GetByIdAsync(command.CampaignId, cancellationToken);
-
-        if (campaign is null)
+        try
         {
-            return ResultData<CampaignOutput>.Error("Campanha não encontrada.");
-        }
+            var campaign = await campaignRepository.GetByIdAsync(command.CampaignId, cancellationToken);
 
-        switch (command.Status)
+            if (campaign is null)
+            {
+                return ResultData<CampaignOutput>.Error("Campanha não encontrada.");
+            }
+
+            switch (command.Status)
+            {
+                case CampaignStatus.Active:
+                    campaign.ActivateCampaign();
+                    break;
+
+                case CampaignStatus.Paused:
+                    campaign.PauseCampaign();
+                    break;
+
+                case CampaignStatus.Cancel:
+                    campaign.CancelCampaign();
+                    break;
+                case CampaignStatus.Conclude:
+                    campaign.ConcluedCampaing();
+                    break;
+
+                default:
+                    return ResultData<CampaignOutput>.Error("O status informado para a campanha é inválido.");
+            }
+
+            await campaignRepository.UpdateAsync(campaign, cancellationToken);
+            await transparencyWriter.UpdateStatusAsync(
+                campaign.Id,
+                campaign.Status.ToString(),
+                cancellationToken);
+
+            return ResultData<CampaignOutput>.Success(campaign.ToOutput());
+        }
+        catch (CampaignDomainException exception)
         {
-            case CampaignStatus.Active:
-                campaign.ActivateCampaign();
-                break;
-
-            case CampaignStatus.Paused:
-                campaign.PauseCampaign();
-                break;
-
-            case CampaignStatus.Closed:
-                campaign.CloseCampaign();
-                break;
-
-            default:
-                return ResultData<CampaignOutput>.Error("O status informado para a campanha é inválido.");
+            return ResultData<CampaignOutput>.Error(exception.Message);
         }
-
-        await campaignRepository.UpdateAsync(campaign, cancellationToken);
-        await transparencyWriter.UpdateStatusAsync(
-            campaign.Id,
-            campaign.Status.ToString(),
-            cancellationToken);
-
-        return ResultData<CampaignOutput>.Success(campaign.ToOutput());
     }
 }

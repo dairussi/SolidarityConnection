@@ -91,8 +91,11 @@ public sealed class CreateOrUpdateCampaignCommandHandler(
             case CampaignStatus.Paused:
                 campaign.PauseCampaign();
                 return ResultData<bool>.Success(true);
-            case CampaignStatus.Closed:
-                campaign.CloseCampaign();
+            case CampaignStatus.Cancel:
+                campaign.CancelCampaign();
+                return ResultData<bool>.Success(true);
+            case CampaignStatus.Conclude:
+                campaign.ConcluedCampaing();
                 return ResultData<bool>.Success(true);
             default:
                 return ResultData<bool>.Error("O status informado para a campanha é inválido.");

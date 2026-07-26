@@ -58,17 +58,21 @@
                                              EndIcon="@Icons.Material.Filled.ExpandMore"
                                              Class="campaign-admin-menu"
                                              Disabled="@(isStatusBusy || isDeleteBusy)">
-                                        <MudMenuItem Disabled="@(isStatusBusy || isDeleteBusy || IsCurrentStatus(campaign, 1))"
+                                        <MudMenuItem Disabled="@(isStatusBusy || isDeleteBusy || !CanChangeToStatus(campaign, 1))"
                                                      OnClick="() => ChangeCampaignStatusAsync(campaign, 1)">
                                             Definir como ativa
                                         </MudMenuItem>
-                                        <MudMenuItem Disabled="@(isStatusBusy || isDeleteBusy || IsCurrentStatus(campaign, 2))"
+                                        <MudMenuItem Disabled="@(isStatusBusy || isDeleteBusy || !CanChangeToStatus(campaign, 2))"
                                                      OnClick="() => ChangeCampaignStatusAsync(campaign, 2)">
                                             Definir como pausada
                                         </MudMenuItem>
-                                        <MudMenuItem Disabled="@(isStatusBusy || isDeleteBusy || IsCurrentStatus(campaign, 3))"
+                                        <MudMenuItem Disabled="@(isStatusBusy || isDeleteBusy || !CanChangeToStatus(campaign, 3))"
                                                      OnClick="() => ChangeCampaignStatusAsync(campaign, 3)">
-                                            Definir como encerrada
+                                            Definir como cancelada
+                                        </MudMenuItem>
+                                        <MudMenuItem Disabled="@(isStatusBusy || isDeleteBusy || !CanChangeToStatus(campaign, 4))"
+                                                     OnClick="() => ChangeCampaignStatusAsync(campaign, 4)">
+                                            Definir como concluída
                                         </MudMenuItem>
                                     </MudMenu>
 
@@ -429,7 +433,7 @@
     private string HomeDescription => Session.IsAdmin
         ? "Acompanhe as campanhas e use os controles administrativos para atualizar status ou remover campanhas sem arrecadação."
         : Session.IsAuthenticated
-            ? "Acompanhe campanhas ativas, pausadas e encerradas em um único lugar."
+            ? "Acompanhe campanhas ativas, pausadas, canceladas e concluídas em um único lugar."
             : "Acompanhe as campanhas ativas e encontre rapidamente onde sua ajuda pode gerar mais impacto.";
 
     private string EmptyStateMessage => Session.IsAuthenticated
@@ -523,6 +527,25 @@
 
     private bool IsCurrentStatus(CampaignSummaryModel campaign, int status)
         => GetCurrentStatusValue(campaign.Status) == status;
+
+    private bool CanChangeToStatus(CampaignSummaryModel campaign, int targetStatus)
+    {
+        var currentStatus = GetCurrentStatusValue(campaign.Status);
+
+        if (currentStatus == targetStatus)
+        {
+            return false;
+        }
+
+        return currentStatus switch
+        {
+            1 => targetStatus is 2 or 3 or 4,
+            2 => targetStatus is 1 or 3,
+            3 => targetStatus == 1,
+            4 => targetStatus == 1,
+            _ => false
+        };
+    }
 
     private string GetStatusActionLabel(CampaignSummaryModel campaign)
         => $"Status: {GetStatusName(GetCurrentStatusValue(campaign.Status))}";
@@ -640,7 +663,8 @@
         => (status ?? string.Empty).Trim().ToUpperInvariant() switch
         {
             "PAUSED" => 2,
-            "CLOSED" => 3,
+            "CANCEL" => 3,
+            "CONCLUDE" => 4,
             _ => 1
         };
 
@@ -648,7 +672,8 @@
         => status switch
         {
             2 => "Pausada",
-            3 => "Encerrada",
+            3 => "Cancelada",
+            4 => "Concluída",
             _ => "Ativa"
         };
 
