@@ -16,7 +16,6 @@ public class DonationController(
     IGetMyTotalsByCampaignQueryHandler getMyTotalsByCampaignQueryHandler,
     IUserContext userContext) : ControllerBase
 {
-    [Authorize(Roles = nameof(EUserRole.Doador))]
     [HttpPost]
     public async Task<IActionResult> Create(
         [FromBody] CreateDonationInput input,
@@ -32,7 +31,6 @@ public class DonationController(
         return Accepted(new { donationId = result.Data, message = "Sua doação foi recebida e será processada em breve." });
     }
 
-    [Authorize(Roles = nameof(EUserRole.Doador))]
     [HttpGet("MyTotalsByCampaign")]
     public async Task<IActionResult> GetMyTotalsByCampaign(CancellationToken cancellationToken)
     {
