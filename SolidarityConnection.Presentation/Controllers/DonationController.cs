@@ -8,6 +8,7 @@ using SolidarityConnection.Domain.Common.Enums;
 
 namespace SolidarityConnection.Presentation.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class DonationController(
@@ -15,7 +16,7 @@ public class DonationController(
     IGetMyTotalsByCampaignQueryHandler getMyTotalsByCampaignQueryHandler,
     IUserContext userContext) : ControllerBase
 {
-    [Authorize]
+    [Authorize(Roles = nameof(EUserRole.Doador))]
     [HttpPost]
     public async Task<IActionResult> Create(
         [FromBody] CreateDonationInput input,
@@ -31,7 +32,7 @@ public class DonationController(
         return Accepted(new { donationId = result.Data, message = "Sua doação foi recebida e será processada em breve." });
     }
 
-    [Authorize]
+    [Authorize(Roles = nameof(EUserRole.Doador))]
     [HttpGet("MyTotalsByCampaign")]
     public async Task<IActionResult> GetMyTotalsByCampaign(CancellationToken cancellationToken)
     {

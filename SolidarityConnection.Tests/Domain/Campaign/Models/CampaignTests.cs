@@ -35,6 +35,36 @@ public class CampaignTests
     }
 
     [Fact]
+    public void UpdateDetails_ShouldUpdateEditableProperties()
+    {
+        var campaign = CampaignEntity.Create(
+            _faker.Lorem.Sentence(3),
+            _faker.Lorem.Paragraph(),
+            DateTime.UtcNow.Date.AddDays(1),
+            DateTime.UtcNow.Date.AddDays(10),
+            500,
+            1);
+
+        campaign.AddDonation(120);
+
+        var newTitle = _faker.Lorem.Sentence(4);
+        var newDescription = _faker.Lorem.Paragraph();
+        var newStartDate = DateTime.UtcNow.Date.AddDays(2);
+        var newEndDate = DateTime.UtcNow.Date.AddDays(20);
+        var newTargetAmount = 1500m;
+
+        campaign.UpdateDetails(newTitle, newDescription, newStartDate, newEndDate, newTargetAmount);
+
+        campaign.Title.Should().Be(newTitle.Trim());
+        campaign.Description.Should().Be(newDescription.Trim());
+        campaign.StartDate.Should().Be(newStartDate);
+        campaign.EndDate.Should().Be(newEndDate);
+        campaign.TargetAmount.Should().Be(newTargetAmount);
+        campaign.AmountRaised.Should().Be(120);
+        campaign.ManagerId.Should().Be(1);
+    }
+
+    [Fact]
     public void PauseCampaign_ShouldThrowException_WhenCampaignIsClosed()
     {
         var campaign = CampaignEntity.Create(

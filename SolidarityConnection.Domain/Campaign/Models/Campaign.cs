@@ -61,6 +61,25 @@ public class Campaign
         Status = CampaignStatus.Closed;
     }
 
+    public void UpdateDetails(
+        string title,
+        string description,
+        DateTime startDate,
+        DateTime endDate,
+        decimal targetAmount)
+    {
+        ValidateTitle(title);
+        ValidateDescription(description);
+        ValidateDates(startDate, endDate);
+        ValidateTargetAmount(targetAmount);
+
+        Title = title.Trim();
+        Description = description.Trim();
+        StartDate = startDate;
+        EndDate = endDate;
+        TargetAmount = targetAmount;
+    }
+
     public void ActivateCampaign()
     {
         Status = CampaignStatus.Active;

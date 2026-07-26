@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SolidarityConnection.Application.Common.Interfaces;
-using SolidarityConnection.Application.Features.Campaigns.Commands.CreateCampaign;
-using SolidarityConnection.Application.Features.Campaigns.Commands.CreateCampaign.Inputs;
+using SolidarityConnection.Application.Features.Campaigns.Commands.CreateOrUpdateCampaign;
+using SolidarityConnection.Application.Features.Campaigns.Commands.CreateOrUpdateCampaign.Inputs;
 using SolidarityConnection.Application.Features.Campaigns.Commands.DeleteCampaign;
 using SolidarityConnection.Application.Features.Campaigns.Commands.UpdateCampaignStatus;
 using SolidarityConnection.Application.Features.Campaigns.Commands.UpdateCampaignStatus.Inputs;
@@ -20,7 +20,7 @@ namespace SolidarityConnection.Presentation.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class CampaignController(
-    ICreateCampaignCommandHandler createCampaignCommandHandler,
+    ICreateOrUpdateCampaignCommandHandler createOrUpdateCampaignCommandHandler,
     IDeleteCampaignCommandHandler deleteCampaignCommandHandler,
     IUpdateCampaignStatusCommandHandler updateCampaignStatusCommandHandler,
     IGetCampaignByIdQueryHandler getCampaignByIdQueryHandler,
@@ -32,15 +32,27 @@ public class CampaignController(
 
     [Authorize(Roles = nameof(EUserRole.GestorONG))]
     [HttpPost]
-    public async Task<IActionResult> Create(
-        [FromBody] CreateCampaignInput input,
+    public async Task<IActionResult> CreateOrUpdate(
+        [FromBody] CreateOrUpdateCampaignInput input,
         CancellationToken cancellationToken)
     {
         var command = input.MapToCommand(userContext.GetCurrentUserId());
-        var result = await createCampaignCommandHandler.Handle(command, cancellationToken);
+        var result = await createOrUpdateCampaignCommandHandler.Handle(command, cancellationToken);
 
         if (!result.IsSuccess)
+        {
+            if (input.Id.HasValue && result.ErrorMessage == "Campanha não encontrada.")
+            {
+                return NotFound(new { message = result.ErrorMessage });
+            }
+
             return BadRequest(new { message = result.ErrorMessage });
+        }
+
+        if (input.Id.HasValue)
+        {
+            return Ok(result.Data);
+        }
 
         return CreatedAtAction(nameof(GetById), new { id = result.Data!.Id }, result.Data);
     }
