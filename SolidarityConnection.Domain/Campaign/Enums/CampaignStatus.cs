@@ -4,5 +4,6 @@ public enum CampaignStatus
 {
     Active = 1,
     Paused = 2,
-    Closed = 3
+    Cancel = 3,
+    Conclude = 4
 }

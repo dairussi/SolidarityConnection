@@ -1,11 +1,11 @@
 using SolidarityConnection.Application.Common;
 using SolidarityConnection.Application.Features.Campaigns.Outputs;
 
-namespace SolidarityConnection.Application.Features.Campaigns.Commands.CreateCampaign;
+namespace SolidarityConnection.Application.Features.Campaigns.Commands.CreateOrUpdateCampaign;
 
-public interface ICreateCampaignCommandHandler
+public interface ICreateOrUpdateCampaignCommandHandler
 {
     Task<ResultData<CampaignOutput>> Handle(
-        CreateCampaignCommand command,
+        CreateOrUpdateCampaignCommand command,
         CancellationToken cancellationToken);
 }

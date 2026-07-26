@@ -188,9 +188,14 @@
         color: #b45309;
     }
 
-    .campaign-badge-closed {
+    .campaign-badge-cancel {
         background: #e5e7eb;
         color: #4b5563;
+    }
+
+    .campaign-badge-conclude {
+        background: #dbeafe;
+        color: #1d4ed8;
     }
 
     .campaign-progress-label {
@@ -244,8 +249,12 @@
         background: #f59e0b;
     }
 
-    .campaign-progress-fill-closed {
+    .campaign-progress-fill-cancel {
         background: #9ca3af;
+    }
+
+    .campaign-progress-fill-conclude {
+        background: #2563eb;
     }
 
     .campaign-values {
@@ -546,21 +555,24 @@
     private string StatusLabel => NormalizedStatus switch
     {
         "PAUSED" => "Campanha pausada",
-        "CLOSED" => "Campanha encerrada",
+        "CANCEL" => "Campanha cancelada",
+        "CONCLUDE" => "Campanha concluída",
         _ => "Campanha ativa"
     };
 
     private string StatusBadgeClass => NormalizedStatus switch
     {
         "PAUSED" => "campaign-badge-paused",
-        "CLOSED" => "campaign-badge-closed",
+        "CANCEL" => "campaign-badge-cancel",
+        "CONCLUDE" => "campaign-badge-conclude",
         _ => "campaign-badge-active"
     };
 
     private string StatusFillClass => NormalizedStatus switch
     {
         "PAUSED" => "campaign-progress-fill-paused",
-        "CLOSED" => "campaign-progress-fill-closed",
+        "CANCEL" => "campaign-progress-fill-cancel",
+        "CONCLUDE" => "campaign-progress-fill-conclude",
         _ => "campaign-progress-fill-active"
     };
 

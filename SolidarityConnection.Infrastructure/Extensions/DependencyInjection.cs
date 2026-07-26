@@ -7,7 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Quartz;
 using SolidarityConnection.Application.Common.Interfaces;
 using SolidarityConnection.Application.Features.Auth.Queries.Login;
-using SolidarityConnection.Application.Features.Campaigns.Commands.CreateCampaign;
+using SolidarityConnection.Application.Features.Campaigns.Commands.CreateOrUpdateCampaign;
 using SolidarityConnection.Application.Features.Campaigns.Commands.DeleteCampaign;
 using SolidarityConnection.Application.Features.Campaigns.Commands.UpdateCampaignStatus;
 using SolidarityConnection.Application.Features.Campaigns.Queries.GetActiveCampaignsPaged;
@@ -82,7 +82,7 @@ public static class DependencyInjection
         services.AddScoped<IToggleUserRoleCommandHandler, ToggleUserRoleCommandHandler>();
         services.AddScoped<IGetUserByIdQueryHandler, GetUserByIdQueryHandler>();
         services.AddScoped<IGetUsersPagedQueryHandler, GetUsersPagedQueryHandler>();
-        services.AddScoped<ICreateCampaignCommandHandler, CreateCampaignCommandHandler>();
+        services.AddScoped<ICreateOrUpdateCampaignCommandHandler, CreateOrUpdateCampaignCommandHandler>();
         services.AddScoped<IDeleteCampaignCommandHandler, DeleteCampaignCommandHandler>();
         services.AddScoped<IUpdateCampaignStatusCommandHandler, UpdateCampaignStatusCommandHandler>();
         services.AddScoped<IGetCampaignByIdQueryHandler, GetCampaignByIdQueryHandler>();

@@ -1,8 +1,9 @@
 using SolidarityConnection.Domain.Campaign.Enums;
 
-namespace SolidarityConnection.Application.Features.Campaigns.Commands.CreateCampaign;
+namespace SolidarityConnection.Application.Features.Campaigns.Commands.CreateOrUpdateCampaign;
 
-public sealed record CreateCampaignCommand(
+public sealed record CreateOrUpdateCampaignCommand(
+    Guid? CampaignId,
     string Title,
     string Description,
     DateTime StartDate,

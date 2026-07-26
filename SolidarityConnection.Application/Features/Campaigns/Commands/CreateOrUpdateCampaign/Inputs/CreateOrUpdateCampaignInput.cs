@@ -1,9 +1,10 @@
 using SolidarityConnection.Domain.Campaign.Enums;
 
-namespace SolidarityConnection.Application.Features.Campaigns.Commands.CreateCampaign.Inputs;
+namespace SolidarityConnection.Application.Features.Campaigns.Commands.CreateOrUpdateCampaign.Inputs;
 
-public class CreateCampaignInput
+public class CreateOrUpdateCampaignInput
 {
+    public Guid? Id { get; set; }
     public required string Title { get; set; }
     public required string Description { get; set; }
     public DateTime StartDate { get; set; }
@@ -11,9 +12,10 @@ public class CreateCampaignInput
     public decimal TargetAmount { get; set; }
     public CampaignStatus Status { get; set; } = CampaignStatus.Active;
 
-    public CreateCampaignCommand MapToCommand(int managerId)
+    public CreateOrUpdateCampaignCommand MapToCommand(int managerId)
     {
-        return new CreateCampaignCommand(
+        return new CreateOrUpdateCampaignCommand(
+            Id,
             Title,
             Description,
             StartDate,
